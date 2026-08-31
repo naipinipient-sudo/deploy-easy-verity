@@ -206,6 +206,7 @@ export type Database = {
           created_at: string
           dataset_id: string
           file_name: string
+          file_path: string | null
           id: string
           mapping: Json
           mapping_confirmed: boolean
@@ -223,6 +224,7 @@ export type Database = {
           created_at?: string
           dataset_id: string
           file_name: string
+          file_path?: string | null
           id?: string
           mapping?: Json
           mapping_confirmed?: boolean
@@ -240,6 +242,7 @@ export type Database = {
           created_at?: string
           dataset_id?: string
           file_name?: string
+          file_path?: string | null
           id?: string
           mapping?: Json
           mapping_confirmed?: boolean

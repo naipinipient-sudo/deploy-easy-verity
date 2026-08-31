@@ -45,18 +45,19 @@ export async function parseFile(file: File, sheetName?: string): Promise<ParsedF
     const buf = await file.arrayBuffer()
     const wb = sheetsFromWorkbook(buf)
     sheetNames = wb.SheetNames
-    activeSheet = sheetName ?? sheetNames[0]
+    activeSheet = sheetName ?? sheetNames[0] ?? file.name
     const sheet = wb.Sheets[activeSheet]
+    if (!sheet) throw new Error(`Sheet "${activeSheet}" not found in workbook`)
     const aoa = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, raw: false, defval: '' })
     // ponytail: assumes header is the first non-empty row, no smarter detection.
     const firstNonEmpty = aoa.findIndex((r) => r.some((c) => String(c).trim() !== ''))
-    headers = (aoa[firstNonEmpty] ?? []).map((h) => String(h).trim())
+    headers = (aoa[firstNonEmpty] ?? []).map((h: string) => String(h).trim())
     rows = aoa.slice(firstNonEmpty + 1).filter((r) => r.some((c) => String(c).trim() !== ''))
   } else {
     const text = await file.text()
     const result = Papa.parse<string[]>(text, { skipEmptyLines: true })
     const aoa = result.data
-    headers = (aoa[0] ?? []).map((h) => String(h).trim())
+    headers = (aoa[0] ?? []).map((h: string) => String(h).trim())
     rows = aoa.slice(1)
     sheetNames = [file.name]
     activeSheet = file.name

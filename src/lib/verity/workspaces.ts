@@ -99,22 +99,24 @@ export type WorkspaceStats = {
 
 export async function getWorkspaceStats(workspaceId: string): Promise<WorkspaceStats> {
   const countFor = async (
-    table: "datasets" | "dataset_versions" | "master_versions" | "workspace_members",
-    apply?: (q: ReturnType<typeof buildCountQuery>) => ReturnType<typeof buildCountQuery>,
+    table: "datasets" | "dataset_versions" | "workspace_members",
   ) => {
-    let query = buildCountQuery(table, workspaceId);
-    if (apply) query = apply(query);
-    const { count, error } = await query;
+    const { count, error } = await buildCountQuery(table, workspaceId);
     if (error) throw error;
     return count ?? 0;
   };
 
-  const [datasets, versions, members, publishedMasters] = await Promise.all([
+  const [datasets, versions, members, { count: publishedMasters, error: publishedError }] = await Promise.all([
     countFor("datasets"),
     countFor("dataset_versions"),
     countFor("workspace_members"),
-    countFor("master_versions", (q) => q.eq("published", true)),
+    supabase
+      .from("master_versions")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", workspaceId)
+      .eq("published", true),
   ]);
+  if (publishedError) throw publishedError;
 
   const { count: openFindings, error: findingsError } = await supabase
     .from("quality_findings")
@@ -127,13 +129,13 @@ export async function getWorkspaceStats(workspaceId: string): Promise<WorkspaceS
     datasets,
     versions,
     members,
-    publishedMasters,
+    publishedMasters: publishedMasters ?? 0,
     openFindings: openFindings ?? 0,
   };
 }
 
 function buildCountQuery(
-  table: "datasets" | "dataset_versions" | "master_versions" | "workspace_members",
+  table: "datasets" | "dataset_versions" | "workspace_members",
   workspaceId: string,
 ) {
   return supabase

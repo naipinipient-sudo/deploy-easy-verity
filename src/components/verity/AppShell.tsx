@@ -98,7 +98,7 @@ export function AppShell({
             return (
               <Link
                 key={item.to}
-                to={item.to}
+                to={item.to as never}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
@@ -132,7 +132,7 @@ export function AppShell({
             {NAV.map((item) => (
               <Link
                 key={item.to}
-                to={item.to}
+                to={item.to as never}
                 className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground"
               >
                 {item.label}
