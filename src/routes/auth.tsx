@@ -42,12 +42,6 @@ async function goPastSignIn(navigate: ReturnType<typeof useNavigate>) {
   }
 }
 
-// Set right before the redirect to Google when it was triggered from the
-// "forgot password" panel, so the page knows -- once the OAuth round trip
-// lands back here with a session -- to show "set a new password" instead
-// of sending the user straight into the app.
-export const RESET_INTENT_KEY = "verity:pwreset-intent";
-
 function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
@@ -55,25 +49,10 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [googleVerifiedForReset, setGoogleVerifiedForReset] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) return;
-
-      if (sessionStorage.getItem(RESET_INTENT_KEY) === "1") {
-        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (aal && aal.nextLevel === "aal2" && aal.nextLevel !== aal.currentLevel) {
-          navigate({ to: "/mfa-challenge" }); // intent flag stays set for when it comes back
-          return;
-        }
-        sessionStorage.removeItem(RESET_INTENT_KEY);
-        setMode("forgot");
-        setGoogleVerifiedForReset(true);
-        return;
-      }
-
-      await goPastSignIn(navigate);
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) goPastSignIn(navigate);
     });
   }, [navigate]);
 
@@ -123,31 +102,6 @@ function AuthPage() {
     await goPastSignIn(navigate);
   };
 
-  const verifyWithGoogleForReset = async () => {
-    setBusy(true);
-    sessionStorage.setItem(RESET_INTENT_KEY, "1");
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/auth`,
-    });
-    if (result.error) {
-      sessionStorage.removeItem(RESET_INTENT_KEY);
-      setBusy(false);
-      toast.error("Google verification failed. Please try again.");
-      return;
-    }
-    if (result.redirected) return;
-    // Same-tab success (no full redirect) -- the effect above only runs on
-    // mount, so re-check here directly.
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    setBusy(false);
-    if (aal && aal.nextLevel === "aal2" && aal.nextLevel !== aal.currentLevel) {
-      navigate({ to: "/mfa-challenge" });
-      return;
-    }
-    sessionStorage.removeItem(RESET_INTENT_KEY);
-    setGoogleVerifiedForReset(true);
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center grid-noise px-4 py-12">
       <div className="w-full max-w-md">
@@ -158,17 +112,7 @@ function AuthPage() {
 
         <div className="panel p-6">
           {mode === "forgot" ? (
-            <ForgotPasswordPanel
-              googleVerified={googleVerifiedForReset}
-              busy={busy}
-              onVerifyWithGoogle={verifyWithGoogleForReset}
-              onDone={() => goPastSignIn(navigate)}
-              onCancel={() => {
-                sessionStorage.removeItem(RESET_INTENT_KEY);
-                setGoogleVerifiedForReset(false);
-                setMode("signin");
-              }}
-            />
+            <ForgotPasswordPanel onDone={() => goPastSignIn(navigate)} onCancel={() => setMode("signin")} />
           ) : (
           <>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
@@ -278,22 +222,26 @@ function AuthPage() {
   );
 }
 
-function ForgotPasswordPanel({
-  googleVerified,
-  busy,
-  onVerifyWithGoogle,
-  onDone,
-  onCancel,
-}: {
-  googleVerified: boolean;
-  busy: boolean;
-  onVerifyWithGoogle: () => void;
-  onDone: () => void;
-  onCancel: () => void;
-}) {
+function ForgotPasswordPanel({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const [email, setEmail] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [localBusy, setLocalBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const sendCode = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Code sent to ${email}.`);
+    setCodeSent(true);
+  };
 
   const resetPassword = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -301,78 +249,103 @@ function ForgotPasswordPanel({
       toast.error("Passwords don't match.");
       return;
     }
-    setLocalBusy(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setLocalBusy(false);
-    if (error) {
-      toast.error(error.message);
+    setBusy(true);
+    const { error: verifyError } = await supabase.auth.verifyOtp({ email, token: code, type: "recovery" });
+    if (verifyError) {
+      setBusy(false);
+      toast.error(verifyError.message);
+      return;
+    }
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setBusy(false);
+    if (updateError) {
+      toast.error(updateError.message);
       return;
     }
     toast.success("Password updated.");
     onDone();
   };
 
-  if (!googleVerified) {
-    return (
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-bold">Reset password</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Verify it's you with Google, then set a new password. No email round-trip.
-          </p>
-        </div>
-        <Button className="w-full" onClick={onVerifyWithGoogle} disabled={busy}>
-          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-          Continue with Google to verify
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          Only works if this account's email matches a Google account. If you have 2FA on, you'll be
-          asked for your authenticator code too.
-        </p>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          Back to sign in
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <form className="space-y-4" onSubmit={resetPassword}>
+    <form className="space-y-4" onSubmit={codeSent ? resetPassword : sendCode}>
       <div>
-        <h2 className="text-2xl font-bold">Set a new password</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Verified with Google. Pick a new password.</p>
+        <h2 className="text-2xl font-bold">Reset password</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {codeSent
+            ? `Enter the code we sent to ${email} and your new password.`
+            : "Enter your email and we'll send a verification code."}
+        </p>
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="forgot-new-password">New password</Label>
-        <PasswordInput
-          id="forgot-new-password"
-          autoComplete="new-password"
-          minLength={6}
+        <Label htmlFor="forgot-email">Email</Label>
+        <Input
+          id="forgot-email"
+          type="email"
+          autoComplete="email"
           required
-          placeholder="Min. 6 characters"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
+          disabled={codeSent}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="forgot-confirm-password">Confirm new password</Label>
-        <PasswordInput
-          id="forgot-confirm-password"
-          autoComplete="new-password"
-          minLength={6}
-          required
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
-      </div>
-      <Button type="submit" className="w-full" disabled={localBusy}>
-        {localBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-        Reset password
+
+      {codeSent && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="forgot-code">Verification code</Label>
+            <Input
+              id="forgot-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              className="text-center text-lg tracking-[0.5em]"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="forgot-new-password">New password</Label>
+            <PasswordInput
+              id="forgot-new-password"
+              autoComplete="new-password"
+              minLength={6}
+              required
+              placeholder="Min. 6 characters"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="forgot-confirm-password">Confirm new password</Label>
+            <PasswordInput
+              id="forgot-confirm-password"
+              autoComplete="new-password"
+              minLength={6}
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={busy || (codeSent && code.length !== 6)}
+      >
+        {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+        {codeSent ? "Reset password" : "Send code"}
       </Button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        Back to sign in
+      </button>
     </form>
   );
 }

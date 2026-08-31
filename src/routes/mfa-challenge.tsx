@@ -6,18 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RESET_INTENT_KEY } from "@/routes/auth";
 
 export const Route = createFileRoute("/mfa-challenge")({
   component: MfaChallengePage,
 });
-
-// If this challenge was reached mid password-reset (Google-verified,
-// pending 2FA), send the user back to /auth so it can pick the intent flag
-// back up and show "set a new password" instead of the normal app.
-function destinationAfterAal2() {
-  return sessionStorage.getItem(RESET_INTENT_KEY) === "1" ? "/auth" : "/overview";
-}
 
 function MfaChallengePage() {
   const navigate = useNavigate();
@@ -31,7 +23,7 @@ function MfaChallengePage() {
       const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (!aal || aal.nextLevel !== "aal2" || aal.nextLevel === aal.currentLevel) {
         // Nothing to verify here — either no session or already at aal2.
-        navigate({ to: aal?.currentLevel === "aal2" ? destinationAfterAal2() : "/auth" });
+        navigate({ to: aal?.currentLevel === "aal2" ? "/overview" : "/auth" });
         return;
       }
       const { data, error } = await supabase.auth.mfa.listFactors();
@@ -56,7 +48,7 @@ function MfaChallengePage() {
       toast.error(error.message);
       return;
     }
-    navigate({ to: destinationAfterAal2() });
+    navigate({ to: "/overview" });
   };
 
   if (loading) {
