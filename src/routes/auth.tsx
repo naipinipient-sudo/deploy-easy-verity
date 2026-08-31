@@ -97,7 +97,7 @@ function AuthPage() {
 
         <div className="panel p-6">
           {mode === "forgot" ? (
-            <ForgotPasswordPanel onDone={() => goPastSignIn(navigate)} onCancel={() => setMode("signin")} />
+            <ForgotPasswordPanel onCancel={() => setMode("signin")} />
           ) : (
           <>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
@@ -197,58 +197,51 @@ function AuthPage() {
   );
 }
 
-function ForgotPasswordPanel({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+function ForgotPasswordPanel({ onCancel }: { onCancel: () => void }) {
   const [email, setEmail] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const sendCode = async (event: React.FormEvent) => {
+  const sendLink = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     setBusy(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success(`Code sent to ${email}.`);
-    setCodeSent(true);
+    setSent(true);
   };
 
-  const resetPassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords don't match.");
-      return;
-    }
-    setBusy(true);
-    const { error: verifyError } = await supabase.auth.verifyOtp({ email, token: code, type: "recovery" });
-    if (verifyError) {
-      setBusy(false);
-      toast.error(verifyError.message);
-      return;
-    }
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-    setBusy(false);
-    if (updateError) {
-      toast.error(updateError.message);
-      return;
-    }
-    toast.success("Password updated.");
-    onDone();
-  };
+  if (sent) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold">Check your email</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            We sent a password reset link to {email}. Open it to set a new password.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <form className="space-y-4" onSubmit={codeSent ? resetPassword : sendCode}>
+    <form className="space-y-4" onSubmit={sendLink}>
       <div>
         <h2 className="text-2xl font-bold">Reset password</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {codeSent
-            ? `Enter the code we sent to ${email} and your new password.`
-            : "Enter your email and we'll send a verification code."}
+          Enter your email and we'll send a link to set a new password.
         </p>
       </div>
 
@@ -259,60 +252,14 @@ function ForgotPasswordPanel({ onDone, onCancel }: { onDone: () => void; onCance
           type="email"
           autoComplete="email"
           required
-          disabled={codeSent}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
       </div>
 
-      {codeSent && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="forgot-code">Verification code</Label>
-            <Input
-              id="forgot-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-              className="text-center text-lg tracking-[0.5em]"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="forgot-new-password">New password</Label>
-            <PasswordInput
-              id="forgot-new-password"
-              autoComplete="new-password"
-              minLength={6}
-              required
-              placeholder="Min. 6 characters"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="forgot-confirm-password">Confirm new password</Label>
-            <PasswordInput
-              id="forgot-confirm-password"
-              autoComplete="new-password"
-              minLength={6}
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
-        </>
-      )}
-
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={busy || (codeSent && code.length !== 6)}
-      >
+      <Button type="submit" className="w-full" disabled={busy}>
         {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-        {codeSent ? "Reset password" : "Send code"}
+        Send reset link
       </Button>
       <button
         type="button"
