@@ -44,10 +44,12 @@ async function goPastSignIn(navigate: ReturnType<typeof useNavigate>) {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot-email" | "forgot-code">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -88,6 +90,42 @@ function AuthPage() {
     navigate({ to: "/overview" });
   };
 
+  const sendRecoveryCode = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Check your email for a 6-digit code.");
+    setMode("forgot-code");
+  };
+
+  const confirmRecoveryCode = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: otpCode,
+      type: "recovery",
+    });
+    if (verifyError) {
+      setBusy(false);
+      toast.error(verifyError.message);
+      return;
+    }
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setBusy(false);
+    if (updateError) {
+      toast.error(updateError.message);
+      return;
+    }
+    toast.success("Password updated.");
+    await goPastSignIn(navigate);
+  };
+
   const signInWithGoogle = async () => {
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth("google", {
@@ -111,6 +149,83 @@ function AuthPage() {
         </Link>
 
         <div className="panel p-6">
+          {mode === "forgot-email" ? (
+            <form className="space-y-4" onSubmit={sendRecoveryCode}>
+              <div>
+                <h2 className="text-lg font-bold">Reset your password</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  We'll email you a 6-digit code — no link to click, just type it in here.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Work email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={busy}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Send code
+              </Button>
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                Back to sign in
+              </button>
+            </form>
+          ) : mode === "forgot-code" ? (
+            <form className="space-y-4" onSubmit={confirmRecoveryCode}>
+              <div>
+                <h2 className="text-lg font-bold">Enter the code</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  We sent a 6-digit code to {email}. Enter it below with your new password.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="otp-code">Code</Label>
+                <Input
+                  id="otp-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  required
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  className="text-center text-lg tracking-[0.5em]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="otp-new-password">New password</Label>
+                <PasswordInput
+                  id="otp-new-password"
+                  autoComplete="new-password"
+                  minLength={6}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={busy || otpCode.length !== 6}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Set new password
+              </Button>
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                Back to sign in
+              </button>
+            </form>
+          ) : (
+          <>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
@@ -131,7 +246,16 @@ function AuthPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signin-password">Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => setMode("forgot-email")}
+                      className="text-xs font-medium normal-case text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <PasswordInput
                     id="signin-password"
                     autoComplete="current-password"
@@ -197,6 +321,8 @@ function AuthPage() {
           <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={busy}>
             Continue with Google
           </Button>
+          </>
+          )}
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
