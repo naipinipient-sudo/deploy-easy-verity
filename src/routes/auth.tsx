@@ -44,12 +44,11 @@ async function goPastSignIn(navigate: ReturnType<typeof useNavigate>) {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [showForgotHint, setShowForgotHint] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -112,6 +111,10 @@ function AuthPage() {
         </Link>
 
         <div className="panel p-6">
+          {mode === "forgot" ? (
+            <ForgotPasswordPanel onDone={() => goPastSignIn(navigate)} onCancel={() => setMode("signin")} />
+          ) : (
+          <>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
@@ -136,7 +139,7 @@ function AuthPage() {
                     <Label htmlFor="signin-password">Password</Label>
                     <button
                       type="button"
-                      onClick={() => setShowForgotHint((v) => !v)}
+                      onClick={() => setMode("forgot")}
                       className="text-xs font-medium normal-case text-primary hover:underline"
                     >
                       Forgot password?
@@ -149,14 +152,6 @@ function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                  {showForgotHint && (
-                    <p className="border-2 border-border bg-secondary/40 px-3 py-2 text-xs">
-                      No email loop needed: sign in with <strong>Continue with Google</strong> below
-                      instead (using the same address), then set a new password from{" "}
-                      <strong>Settings</strong>. If you have 2FA on, it'll ask for your authenticator
-                      code on the way in — that's the identity check.
-                    </p>
-                  )}
                 </div>
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
@@ -215,6 +210,8 @@ function AuthPage() {
           <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={busy}>
             Continue with Google
           </Button>
+          </>
+          )}
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
@@ -222,5 +219,133 @@ function AuthPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+function ForgotPasswordPanel({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const [email, setEmail] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const sendCode = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Code sent to ${email}.`);
+    setCodeSent(true);
+  };
+
+  const resetPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords don't match.");
+      return;
+    }
+    setBusy(true);
+    const { error: verifyError } = await supabase.auth.verifyOtp({ email, token: code, type: "recovery" });
+    if (verifyError) {
+      setBusy(false);
+      toast.error(verifyError.message);
+      return;
+    }
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setBusy(false);
+    if (updateError) {
+      toast.error(updateError.message);
+      return;
+    }
+    toast.success("Password updated.");
+    onDone();
+  };
+
+  return (
+    <form className="space-y-4" onSubmit={codeSent ? resetPassword : sendCode}>
+      <div>
+        <h2 className="text-2xl font-bold">Reset password</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {codeSent
+            ? `Enter the code we sent to ${email} and your new password.`
+            : "Enter your email and we'll send a verification code."}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="forgot-email">Email</Label>
+        <Input
+          id="forgot-email"
+          type="email"
+          autoComplete="email"
+          required
+          disabled={codeSent}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+
+      {codeSent && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="forgot-code">Verification code</Label>
+            <Input
+              id="forgot-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              className="text-center text-lg tracking-[0.5em]"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="forgot-new-password">New password</Label>
+            <PasswordInput
+              id="forgot-new-password"
+              autoComplete="new-password"
+              minLength={6}
+              required
+              placeholder="Min. 6 characters"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="forgot-confirm-password">Confirm new password</Label>
+            <PasswordInput
+              id="forgot-confirm-password"
+              autoComplete="new-password"
+              minLength={6}
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={busy || (codeSent && code.length !== 6)}
+      >
+        {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+        {codeSent ? "Reset password" : "Send code"}
+      </Button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        Back to sign in
+      </button>
+    </form>
   );
 }
