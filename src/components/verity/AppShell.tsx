@@ -1,38 +1,21 @@
 import type { ReactNode } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import {
-  BarChart3,
-  Bike,
-  Database,
-  GitCompare,
-  LayoutDashboard,
-  LogOut,
-  Settings,
-  Sparkles,
-  Layers,
-  ShieldCheck,
-} from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { to: "/overview", label: "Overview", icon: LayoutDashboard },
-  { to: "/workspaces", label: "Workspaces", icon: Layers },
-  { to: "/datasets", label: "Datasets", icon: Database },
-  { to: "/compare", label: "Compare", icon: GitCompare },
-  { to: "/explore", label: "Explore", icon: BarChart3 },
-  { to: "/riders", label: "Rider Performance", icon: Bike },
-  { to: "/ai-analyst", label: "AI Analyst", icon: Sparkles },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/datasets", label: "Datasets", soon: false },
+  { to: "/quality", label: "Quality", soon: true },
+  { to: "/compare", label: "Compare", soon: true },
+  { to: "/reconcile", label: "Reconcile", soon: true },
+  { to: "/master", label: "Master", soon: true },
+  { to: "/explore", label: "Explore", soon: true },
+  { to: "/riders", label: "Riders", soon: true },
+  { to: "/ai-analyst", label: "AI analyst", soon: true },
 ] as const;
 
 export function AppShell({
@@ -47,8 +30,8 @@ export function AppShell({
   children: ReactNode;
 }) {
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { workspaces, activeWorkspace, selectWorkspace } = useActiveWorkspace();
+  const { user } = useAuth();
+  const { activeWorkspace } = useActiveWorkspace();
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -56,91 +39,98 @@ export function AppShell({
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4 lg:flex">
-        <Link to="/overview" className="flex items-center gap-2 px-2 py-1">
-          <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
-          <span className="font-display text-lg font-semibold tracking-tight">Verity</span>
-        </Link>
-
-        <div className="mt-6">
-          <label className="px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Workspace
-          </label>
-          <Select
-            value={activeWorkspace?.id ?? ""}
-            onValueChange={(value) => {
-              if (value === "__new") {
-                navigate({ to: "/workspaces/new" });
-                return;
-              }
-              selectWorkspace(value);
-            }}
-          >
-            <SelectTrigger className="mt-2 w-full">
-              <SelectValue placeholder="No workspace yet" />
-            </SelectTrigger>
-            <SelectContent>
-              {workspaces.map((w) => (
-                <SelectItem key={w.id} value={w.id}>
-                  {w.name}
-                </SelectItem>
-              ))}
-              <SelectItem value="__new">+ New workspace</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="flex flex-wrap items-center justify-between gap-3 bg-header px-6 py-3 text-header-foreground">
+        <div className="flex items-center gap-3">
+          <Link to="/overview" className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center bg-primary text-sm font-bold text-primary-foreground">
+              V
+            </span>
+            <span className="font-display text-lg font-bold tracking-tight">Verity</span>
+          </Link>
+          <Badge variant="outline" className="border-primary text-primary">
+            Read-only sources
+          </Badge>
         </div>
 
-        <nav className="mt-6 flex flex-1 flex-col gap-1">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
-            return (
-              <Link
-                key={item.to}
-                to={item.to as never}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4" aria-hidden />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Link
+            to="/workspaces"
+            className="border-2 border-header-foreground/60 px-3 py-1 font-semibold uppercase tracking-wide hover:border-header-foreground"
+          >
+            {activeWorkspace?.name ?? "No workspace"}
+          </Link>
+          {activeWorkspace && (
+            <span className="border-2 border-header-foreground/60 px-3 py-1 font-semibold uppercase tracking-wide">
+              {activeWorkspace.timezone} · {activeWorkspace.currency}
+            </span>
+          )}
+          {user && (
+            <button
+              onClick={signOut}
+              title="Sign out"
+              className="rounded-full bg-header-foreground px-3 py-1 font-semibold text-header lowercase"
+            >
+              {user.email}
+            </button>
+          )}
+        </div>
+      </header>
 
-        <Button variant="ghost" size="sm" className="justify-start" onClick={signOut}>
-          <LogOut className="mr-2 h-4 w-4" aria-hidden />
-          Sign out
-        </Button>
-      </aside>
+      <div className="flex flex-1 flex-col gap-6 p-6 lg:flex-row">
+        <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-64">
+          <nav className="panel flex flex-col gap-2 p-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Workspace
+            </span>
+            {NAV.map((item) =>
+              item.soon ? (
+                <div
+                  key={item.to}
+                  className="flex items-center justify-between border-2 border-dashed border-border/50 px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <span>{item.label}</span>
+                  <Badge variant="secondary" className="text-[10px]">
+                    Soon
+                  </Badge>
+                </div>
+              ) : (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="border-2 border-border bg-card px-3 py-2 text-sm font-semibold hover:bg-accent"
+                  activeProps={{ className: "border-2 border-border bg-primary text-primary-foreground px-3 py-2 text-sm font-semibold" }}
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
+          </nav>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-border bg-surface/60 px-6 py-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="border-2 border-border bg-secondary p-4">
+            <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+              Principle
+            </span>
+            <p className="mt-2 text-sm font-medium">
+              Verity never writes back to a source system. Uploads are immutable evidence.
+            </p>
+          </div>
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold">{title}</h1>
-              {description ? (
-                <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-              ) : null}
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Workspace home
+              </p>
+              <h1 className={cn("truncate text-3xl font-bold")}>{title}</h1>
+              {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
             </div>
             <div className="flex items-center gap-2">{actions}</div>
           </div>
-          <nav className="mt-4 flex gap-2 overflow-x-auto lg:hidden">
-            {NAV.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to as never}
-                className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </header>
-        <main className="flex-1 px-6 py-6">{children}</main>
+          <main>{children}</main>
+        </div>
       </div>
     </div>
   );

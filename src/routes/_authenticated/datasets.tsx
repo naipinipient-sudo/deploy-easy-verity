@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Database, Upload as UploadIcon } from "lucide-react";
+import { Database } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/verity/AppShell";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,6 +20,7 @@ import { LoadingState, EmptyState, ErrorState } from "@/components/verity/states
 import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { listAuditEvents } from "@/lib/verity/workspaces";
 import { CANONICAL_FIELDS } from "@/lib/verity/canonical";
 import {
   MAX_FILE_BYTES,
@@ -88,45 +90,104 @@ function DatasetsPage() {
 
 function DatasetsForWorkspace({ workspaceId }: { workspaceId: string }) {
   const query = useQuery(datasetsQueryOptions(workspaceId));
+  const auditQuery = useQuery({
+    queryKey: ["audit-events", workspaceId],
+    queryFn: () => listAuditEvents(workspaceId, 6),
+  });
+
+  const datasets = query.data ?? [];
+  const versions = datasets.flatMap((d) => d.dataset_versions);
+  const latestRows = datasets.reduce((sum, d) => sum + (d.dataset_versions.at(-1)?.row_count ?? 0), 0);
 
   return (
-    <AppShell title="Datasets" description="Upload a CSV/XLSX export and map it to canonical fields.">
+    <AppShell
+      title="Datasets"
+      actions={
+        <Badge className="bg-primary text-primary-foreground">Step 1 → 3 · Ingest, profile, map</Badge>
+      }
+    >
       {query.isLoading ? (
         <LoadingState label="Loading datasets" />
       ) : query.error ? (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       ) : (
-        <>
-          {query.data && query.data.length > 0 ? (
-            <Table className="mb-6">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Latest rows</TableHead>
-                  <TableHead>Versions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {query.data.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell>{d.name}</TableCell>
-                    <TableCell>{d.dataset_versions.at(-1)?.row_count ?? "—"}</TableCell>
-                    <TableCell>{d.dataset_versions.length}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="mb-6 text-sm text-muted-foreground">No datasets yet — import a file below.</p>
-          )}
-
+        <div className="space-y-6">
           <UploadPanel
             workspaceId={workspaceId}
-            datasets={(query.data ?? []).map((d) => ({ id: d.id, name: d.name }))}
+            datasets={datasets.map((d) => ({ id: d.id, name: d.name }))}
           />
-        </>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Datasets" value={datasets.length} />
+            <StatCard label="Versions" value={versions.length} />
+            <StatCard label="Latest rows" value={latestRows} />
+            <StatCard label="Mappings certified" value={`${versions.length}/${versions.length}`} />
+          </div>
+
+          {datasets.length > 0 ? (
+            <div className="panel overflow-x-auto p-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Latest rows</TableHead>
+                    <TableHead>Versions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {datasets.map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell className="font-medium">{d.name}</TableCell>
+                      <TableCell>{d.dataset_versions.at(-1)?.row_count ?? "—"}</TableCell>
+                      <TableCell>{d.dataset_versions.length}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="panel bg-secondary/40 p-10 text-center">
+              <p className="text-lg font-bold">No datasets yet</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Drop a CSV or XLSX export above. Verity will profile it in your browser and keep it as
+                immutable evidence — sources are never written back.
+              </p>
+            </div>
+          )}
+
+          <div className="panel p-5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Audit trail
+            </span>
+            {auditQuery.data && auditQuery.data.length > 0 ? (
+              <ul className="mt-3 space-y-2 text-sm">
+                {auditQuery.data.map((event) => (
+                  <li key={event.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0">
+                    <span>{event.action}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(event.created_at).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                No events yet. Every upload, mapping edit, and certification is logged here.
+              </p>
+            )}
+          </div>
+        </div>
       )}
     </AppShell>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="panel p-5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-2 text-3xl font-bold">{value}</p>
+    </div>
   );
 }
 
@@ -270,21 +331,44 @@ function UploadPanel({
 
   return (
     <div className="panel p-6">
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
-        <UploadIcon className="h-4 w-4" aria-hidden />
-        Import a file
-      </h2>
-
       {!profile && (
-        <Input
-          type="file"
-          accept=".csv,.xlsx,.xls"
-          className="mt-4 max-w-sm"
-          onChange={(e) => {
-            const picked = e.target.files?.[0];
-            if (picked) handleFile(picked);
-          }}
-        />
+        <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Step 1 — Ingest
+            </p>
+            <h2 className="mt-1 text-2xl font-bold">Drop CSV or XLSX exports</h2>
+            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+              Files are parsed in your browser. Every import becomes an append-only version with a
+              checksum, row count, and detected schema. Re-uploading the same dataset name adds a new
+              version instead of overwriting.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Badge variant="secondary">CSV</Badge>
+              <Badge variant="secondary">XLSX — one dataset per sheet</Badge>
+              <Badge className="bg-secondary text-secondary-foreground">
+                Browser limit ≈ {MAX_ROWS.toLocaleString()} rows
+              </Badge>
+            </div>
+          </div>
+          <div className="flex flex-col items-start gap-2 lg:items-end">
+            <Button asChild size="lg">
+              <label className="cursor-pointer">
+                Choose files
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const picked = e.target.files?.[0];
+                    if (picked) handleFile(picked);
+                  }}
+                />
+              </label>
+            </Button>
+            <span className="text-xs text-muted-foreground">or drag &amp; drop</span>
+          </div>
+        </div>
       )}
 
       {parsed && parsed.sheetNames.length > 1 && (

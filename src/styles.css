@@ -5,15 +5,16 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Verity design system.
- * Deep navy "evidence" surfaces + signal teal accent + amber for exceptions.
- * All colors are oklch tokens. Never hardcode colors in components.
+ * Verity design system: "field evidence" neo-brutalist.
+ * Cream paper + ink-black rules + orange/yellow signal colors, monospace
+ * throughout. Sharp corners, thick borders, all-caps labels. Never
+ * hardcode colors in components -- use the tokens below.
  */
 
 @theme inline {
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -61,69 +62,70 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-header: var(--header);
+  --color-header-foreground: var(--header-foreground);
 
-  --shadow-elevated: 0 24px 60px -32px oklch(0.12 0.04 235 / 0.85);
-  --shadow-panel: 0 1px 0 0 oklch(1 0 0 / 0.04) inset;
+  --shadow-panel: 4px 4px 0 0 var(--border);
+  --shadow-panel-sm: 3px 3px 0 0 var(--border);
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0px;
 
-  --background: oklch(0.19 0.028 245);
-  --foreground: oklch(0.96 0.006 240);
+  --background: #f3eee0;
+  --foreground: #15130d;
 
-  --surface: oklch(0.23 0.03 245);
-  --surface-foreground: oklch(0.96 0.006 240);
+  --surface: #ffffff;
+  --surface-foreground: #15130d;
 
-  --card: oklch(0.235 0.03 245);
-  --card-foreground: oklch(0.96 0.006 240);
+  --card: #ffffff;
+  --card-foreground: #15130d;
 
-  --popover: oklch(0.235 0.03 245);
-  --popover-foreground: oklch(0.96 0.006 240);
+  --popover: #ffffff;
+  --popover-foreground: #15130d;
 
-  --primary: oklch(0.78 0.13 188);
-  --primary-foreground: oklch(0.19 0.03 230);
+  --primary: #ff5a1f;
+  --primary-foreground: #15130d;
 
-  --secondary: oklch(0.29 0.032 245);
-  --secondary-foreground: oklch(0.94 0.008 240);
+  --secondary: #ffc629;
+  --secondary-foreground: #15130d;
 
-  --muted: oklch(0.27 0.028 245);
-  --muted-foreground: oklch(0.71 0.02 243);
+  --muted: #e9e2cd;
+  --muted-foreground: #6b6656;
 
-  --accent: oklch(0.31 0.04 235);
-  --accent-foreground: oklch(0.95 0.01 240);
+  --accent: #e9e2cd;
+  --accent-foreground: #15130d;
 
-  --destructive: oklch(0.63 0.19 22);
-  --destructive-foreground: oklch(0.98 0.005 240);
+  --destructive: #d6432b;
+  --destructive-foreground: #fff8ee;
 
-  --warning: oklch(0.79 0.15 76);
-  --warning-foreground: oklch(0.22 0.04 60);
+  --warning: #ffc629;
+  --warning-foreground: #15130d;
 
-  --success: oklch(0.74 0.14 160);
-  --success-foreground: oklch(0.2 0.04 165);
+  --success: #2f7a4f;
+  --success-foreground: #fff8ee;
 
-  --border: oklch(0.33 0.03 243);
-  --input: oklch(0.33 0.03 243);
-  --ring: oklch(0.78 0.13 188);
+  --border: #15130d;
+  --input: #15130d;
+  --ring: #ff5a1f;
 
-  --chart-1: oklch(0.78 0.13 188);
-  --chart-2: oklch(0.72 0.13 250);
-  --chart-3: oklch(0.79 0.15 76);
-  --chart-4: oklch(0.74 0.14 160);
-  --chart-5: oklch(0.68 0.16 20);
+  --chart-1: #ff5a1f;
+  --chart-2: #ffc629;
+  --chart-3: #2f7a4f;
+  --chart-4: #2f6fa8;
+  --chart-5: #8a4fd6;
 
-  --sidebar: oklch(0.165 0.026 245);
-  --sidebar-foreground: oklch(0.9 0.01 240);
-  --sidebar-primary: oklch(0.78 0.13 188);
-  --sidebar-primary-foreground: oklch(0.18 0.03 230);
-  --sidebar-accent: oklch(0.26 0.03 245);
-  --sidebar-accent-foreground: oklch(0.96 0.006 240);
-  --sidebar-border: oklch(0.28 0.03 243);
-  --sidebar-ring: oklch(0.78 0.13 188);
-}
+  --sidebar: #ffffff;
+  --sidebar-foreground: #15130d;
+  --sidebar-primary: #ff5a1f;
+  --sidebar-primary-foreground: #15130d;
+  --sidebar-accent: #e9e2cd;
+  --sidebar-accent-foreground: #15130d;
+  --sidebar-border: #15130d;
+  --sidebar-ring: #ff5a1f;
 
-.dark {
-  color-scheme: dark;
+  --header: #15130d;
+  --header-foreground: #f3eee0;
 }
 
 @layer base {
@@ -132,7 +134,7 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
@@ -147,18 +149,24 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.015em;
+    letter-spacing: -0.01em;
+  }
+
+  label,
+  .label-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 }
 
 @utility panel {
   background-color: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-panel);
 }
 
 @utility grid-noise {
-  background-image:
-    radial-gradient(ellipse 80% 55% at 50% -10%, oklch(0.78 0.13 188 / 0.16), transparent 70%),
-    linear-gradient(to bottom, oklch(1 0 0 / 0.02), transparent 40%);
+  background-image: linear-gradient(color-mix(in oklch, var(--color-border) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklch, var(--color-border) 8%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
