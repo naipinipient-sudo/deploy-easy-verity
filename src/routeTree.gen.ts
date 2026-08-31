@@ -12,8 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as MfaChallengeRouteImport } from './routes/mfa-challenge'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedDatasetsRouteImport } from './routes/_authenticated/datasets'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedWorkspacesIndexRouteImport } from './routes/_authenticated/workspaces/index'
 import { Route as AuthenticatedWorkspacesNewRouteImport } from './routes/_authenticated/workspaces/new'
 
@@ -31,6 +34,16 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MfaChallengeRoute = MfaChallengeRouteImport.update({
+  id: '/mfa-challenge',
+  path: '/mfa-challenge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDatasetsRoute = AuthenticatedDatasetsRouteImport.update({
   id: '/datasets',
   path: '/datasets',
@@ -39,6 +52,11 @@ const AuthenticatedDatasetsRoute = AuthenticatedDatasetsRouteImport.update({
 const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedWorkspacesIndexRoute =
@@ -57,16 +75,22 @@ const AuthenticatedWorkspacesNewRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mfa-challenge': typeof MfaChallengeRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mfa-challenge': typeof MfaChallengeRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces': typeof AuthenticatedWorkspacesIndexRoute
 }
@@ -75,8 +99,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mfa-challenge': typeof MfaChallengeRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/datasets': typeof AuthenticatedDatasetsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/_authenticated/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
 }
@@ -85,16 +112,22 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/mfa-challenge'
+    | '/reset-password'
     | '/datasets'
     | '/overview'
+    | '/settings'
     | '/workspaces/new'
     | '/workspaces/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/mfa-challenge'
+    | '/reset-password'
     | '/datasets'
     | '/overview'
+    | '/settings'
     | '/workspaces/new'
     | '/workspaces'
   id:
@@ -102,8 +135,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/mfa-challenge'
+    | '/reset-password'
     | '/_authenticated/datasets'
     | '/_authenticated/overview'
+    | '/_authenticated/settings'
     | '/_authenticated/workspaces/new'
     | '/_authenticated/workspaces/'
   fileRoutesById: FileRoutesById
@@ -112,6 +148,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  MfaChallengeRoute: typeof MfaChallengeRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -137,6 +175,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mfa-challenge': {
+      id: '/mfa-challenge'
+      path: '/mfa-challenge'
+      fullPath: '/mfa-challenge'
+      preLoaderRoute: typeof MfaChallengeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/datasets': {
       id: '/_authenticated/datasets'
       path: '/datasets'
@@ -149,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/overview'
       fullPath: '/overview'
       preLoaderRoute: typeof AuthenticatedOverviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/workspaces/': {
@@ -171,6 +230,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDatasetsRoute: typeof AuthenticatedDatasetsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedWorkspacesNewRoute: typeof AuthenticatedWorkspacesNewRoute
   AuthenticatedWorkspacesIndexRoute: typeof AuthenticatedWorkspacesIndexRoute
 }
@@ -178,6 +238,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDatasetsRoute: AuthenticatedDatasetsRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedWorkspacesNewRoute: AuthenticatedWorkspacesNewRoute,
   AuthenticatedWorkspacesIndexRoute: AuthenticatedWorkspacesIndexRoute,
 }
@@ -189,6 +250,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  MfaChallengeRoute: MfaChallengeRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

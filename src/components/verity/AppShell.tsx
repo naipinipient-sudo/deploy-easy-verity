@@ -16,6 +16,7 @@ const NAV = [
   { to: "/explore", label: "Explore", soon: true },
   { to: "/riders", label: "Riders", soon: true },
   { to: "/ai-analyst", label: "AI analyst", soon: true },
+  { to: "/settings", label: "Settings", soon: false },
 ] as const;
 
 export function AppShell({

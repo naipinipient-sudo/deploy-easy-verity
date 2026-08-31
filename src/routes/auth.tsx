@@ -7,6 +7,7 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/verity/PasswordInput";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/auth")({
@@ -30,8 +31,20 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+// After a first-factor sign-in, route to the MFA challenge if the account
+// has a verified second factor and this session hasn't cleared it yet.
+async function goPastSignIn(navigate: ReturnType<typeof useNavigate>) {
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (data && data.nextLevel === "aal2" && data.nextLevel !== data.currentLevel) {
+    navigate({ to: "/mfa-challenge" });
+  } else {
+    navigate({ to: "/overview" });
+  }
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -39,7 +52,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/overview" });
+      if (data.session) goPastSignIn(navigate);
     });
   }, [navigate]);
 
@@ -52,7 +65,7 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    navigate({ to: "/overview" });
+    await goPastSignIn(navigate);
   };
 
   const signUp = async (event: React.FormEvent) => {
@@ -75,6 +88,21 @@ function AuthPage() {
     navigate({ to: "/overview" });
   };
 
+  const sendResetLink = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Password reset link sent — check your email.");
+    setMode("signin");
+  };
+
   const signInWithGoogle = async () => {
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth("google", {
@@ -86,7 +114,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/overview" });
+    await goPastSignIn(navigate);
   };
 
   return (
@@ -98,94 +126,136 @@ function AuthPage() {
         </Link>
 
         <div className="panel p-6">
-          <Tabs defaultValue="signin">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Create account</TabsTrigger>
-            </TabsList>
+          {mode === "forgot" ? (
+            <form className="space-y-4" onSubmit={sendResetLink}>
+              <div>
+                <h2 className="text-lg font-bold">Reset your password</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  We'll email you a link to set a new password.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Work email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={busy}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Send reset link
+              </Button>
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                Back to sign in
+              </button>
+            </form>
+          ) : (
+            <>
+              <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="signin">Sign in</TabsTrigger>
+                  <TabsTrigger value="signup">Create account</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="signin">
-              <form className="mt-5 space-y-4" onSubmit={signIn}>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Work email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={busy}>
-                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Sign in
-                </Button>
-              </form>
-            </TabsContent>
+                <TabsContent value="signin">
+                  <form className="mt-5 space-y-4" onSubmit={signIn}>
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Work email</Label>
+                      <Input
+                        id="signin-email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="signin-password">Password</Label>
+                        <button
+                          type="button"
+                          onClick={() => setMode("forgot")}
+                          className="text-xs font-medium normal-case text-primary hover:underline"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                      <PasswordInput
+                        id="signin-password"
+                        autoComplete="current-password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={busy}>
+                      {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                      Sign in
+                    </Button>
+                  </form>
+                </TabsContent>
 
-            <TabsContent value="signup">
-              <form className="mt-5 space-y-4" onSubmit={signUp}>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Name</Label>
-                  <Input
-                    id="signup-name"
-                    autoComplete="name"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Work email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={6}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={busy}>
-                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Create account
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+                <TabsContent value="signup">
+                  <form className="mt-5 space-y-4" onSubmit={signUp}>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Name</Label>
+                      <Input
+                        id="signup-name"
+                        autoComplete="name"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Work email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <PasswordInput
+                        id="signup-password"
+                        autoComplete="new-password"
+                        minLength={6}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={busy}>
+                      {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                      Create account
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
 
-          <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            or
-            <span className="h-px flex-1 bg-border" />
-          </div>
+              <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
 
-          <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={busy}>
-            Continue with Google
-          </Button>
+              <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={busy}>
+                Continue with Google
+              </Button>
+            </>
+          )}
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
