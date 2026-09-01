@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, ShieldCheck, ShieldOff } from "lucide-react";
+import { Loader2, ShieldCheck, ShieldOff, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import type { Factor } from "@supabase/supabase-js";
 import { AppShell } from "@/components/verity/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { PasswordInput } from "@/components/verity/PasswordInput";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
+import { adminResetPassword, listWorkspaceMembers, type WorkspaceMemberWithProfile } from "@/lib/verity/workspaces";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -20,6 +24,7 @@ function SettingsPage() {
       <div className="max-w-lg space-y-6">
         <ChangePassword />
         <TwoFactor />
+        <TeamMembers />
       </div>
     </AppShell>
   );
@@ -212,5 +217,144 @@ function TwoFactor() {
         </div>
       )}
     </div>
+  );
+}
+
+function TeamMembers() {
+  const { user } = useAuth();
+  const { activeWorkspace } = useActiveWorkspace();
+  const [members, setMembers] = useState<WorkspaceMemberWithProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [resetTarget, setResetTarget] = useState<WorkspaceMemberWithProfile | null>(null);
+
+  async function load(workspaceId: string) {
+    setLoading(true);
+    try {
+      setMembers(await listWorkspaceMembers(workspaceId));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load members");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeWorkspace) load(activeWorkspace.id);
+  }, [activeWorkspace?.id]);
+
+  if (!activeWorkspace) return null;
+  const canManage = activeWorkspace.role === "owner" || activeWorkspace.role === "admin";
+  if (!canManage) return null;
+
+  return (
+    <div className="panel space-y-4 p-6">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        Team — {activeWorkspace.name}
+      </h2>
+
+      {loading ? (
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
+      ) : resetTarget ? (
+        <ResetMemberPasswordForm
+          member={resetTarget}
+          onDone={() => {
+            setResetTarget(null);
+            load(activeWorkspace.id);
+          }}
+          onCancel={() => setResetTarget(null)}
+        />
+      ) : (
+        <ul className="space-y-2">
+          {members.map((m) => (
+            <li key={m.userId} className="flex items-center justify-between gap-3 border-b border-border pb-2 last:border-0">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{m.displayName || m.email || m.userId}</p>
+                <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge variant="secondary">{m.role}</Badge>
+                {m.userId !== user?.id && (
+                  <Button variant="outline" size="sm" onClick={() => setResetTarget(m)}>
+                    <KeyRound className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                    Reset password
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ResetMemberPasswordForm({
+  member,
+  onDone,
+  onCancel,
+}: {
+  member: WorkspaceMemberWithProfile;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password !== confirm) {
+      toast.error("Passwords don't match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await adminResetPassword(member.userId, password);
+      toast.success(`Password updated for ${member.email ?? member.displayName}.`);
+      onDone();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not reset password");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="space-y-4" onSubmit={submit}>
+      <p className="text-sm">
+        New password for <strong>{member.email ?? member.displayName}</strong>
+      </p>
+      <div className="space-y-2">
+        <Label htmlFor="member-new-password">New password</Label>
+        <PasswordInput
+          id="member-new-password"
+          autoComplete="new-password"
+          minLength={6}
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="member-confirm-password">Confirm password</Label>
+        <PasswordInput
+          id="member-confirm-password"
+          autoComplete="new-password"
+          minLength={6}
+          required
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button type="submit" disabled={busy}>
+          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+          Set password
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }

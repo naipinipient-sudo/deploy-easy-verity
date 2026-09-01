@@ -144,6 +144,53 @@ function buildCountQuery(
     .eq("workspace_id", workspaceId);
 }
 
+export type WorkspaceMemberWithProfile = {
+  userId: string;
+  role: WorkspaceRole;
+  email: string | null;
+  displayName: string | null;
+};
+
+/** Members of a workspace, with profile info for display. */
+export async function listWorkspaceMembers(workspaceId: string): Promise<WorkspaceMemberWithProfile[]> {
+  const { data: members, error } = await supabase
+    .from("workspace_members")
+    .select("user_id, role")
+    .eq("workspace_id", workspaceId);
+  if (error) throw error;
+  if (!members || members.length === 0) return [];
+
+  const userIds = members.map((m) => m.user_id);
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, email, display_name")
+    .in("id", userIds);
+  if (profilesError) throw profilesError;
+
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+  return members.map((m) => ({
+    userId: m.user_id,
+    role: m.role,
+    email: profileById.get(m.user_id)?.email ?? null,
+    displayName: profileById.get(m.user_id)?.display_name ?? null,
+  }));
+}
+
+/** Owner/admin sets a new password for another member of a shared workspace. */
+export async function adminResetPassword(targetUserId: string, newPassword: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("admin-reset-password", {
+    body: { targetUserId, newPassword },
+  });
+  if (error) {
+    // The function returns {error: "..."} in the body even on failure;
+    // supabase-js doesn't surface that in `error.message` automatically.
+    const context = (error as { context?: Response }).context;
+    const body = context ? await context.clone().json().catch(() => null) : null;
+    throw new Error(body?.error ?? error.message);
+  }
+  if (data?.error) throw new Error(data.error);
+}
+
 export type AuditEvent = Database["public"]["Tables"]["audit_events"]["Row"];
 
 export async function listAuditEvents(workspaceId: string, limit = 10): Promise<AuditEvent[]> {
