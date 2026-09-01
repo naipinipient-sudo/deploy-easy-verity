@@ -16,6 +16,7 @@ import { Route as MfaChallengeRouteImport } from './routes/mfa-challenge'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedCompareRouteImport } from './routes/_authenticated/compare'
 import { Route as AuthenticatedDatasetsRouteImport } from './routes/_authenticated/datasets'
+import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated/master'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedQualityRouteImport } from './routes/_authenticated/quality'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
@@ -55,6 +56,11 @@ const AuthenticatedCompareRoute = AuthenticatedCompareRouteImport.update({
 const AuthenticatedDatasetsRoute = AuthenticatedDatasetsRouteImport.update({
   id: '/datasets',
   path: '/datasets',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMasterRoute = AuthenticatedMasterRouteImport.update({
+  id: '/master',
+  path: '/master',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/compare': typeof AuthenticatedCompareRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
+  '/master': typeof AuthenticatedMasterRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/quality': typeof AuthenticatedQualityRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/compare': typeof AuthenticatedCompareRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
+  '/master': typeof AuthenticatedMasterRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/quality': typeof AuthenticatedQualityRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/compare': typeof AuthenticatedCompareRoute
   '/_authenticated/datasets': typeof AuthenticatedDatasetsRoute
+  '/_authenticated/master': typeof AuthenticatedMasterRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/quality': typeof AuthenticatedQualityRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/compare'
     | '/datasets'
+    | '/master'
     | '/overview'
     | '/quality'
     | '/reconcile'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/compare'
     | '/datasets'
+    | '/master'
     | '/overview'
     | '/quality'
     | '/reconcile'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/compare'
     | '/_authenticated/datasets'
+    | '/_authenticated/master'
     | '/_authenticated/overview'
     | '/_authenticated/quality'
     | '/_authenticated/reconcile'
@@ -239,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDatasetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/master': {
+      id: '/_authenticated/master'
+      path: '/master'
+      fullPath: '/master'
+      preLoaderRoute: typeof AuthenticatedMasterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/overview': {
       id: '/_authenticated/overview'
       path: '/overview'
@@ -287,6 +306,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCompareRoute: typeof AuthenticatedCompareRoute
   AuthenticatedDatasetsRoute: typeof AuthenticatedDatasetsRoute
+  AuthenticatedMasterRoute: typeof AuthenticatedMasterRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedQualityRoute: typeof AuthenticatedQualityRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
@@ -298,6 +318,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCompareRoute: AuthenticatedCompareRoute,
   AuthenticatedDatasetsRoute: AuthenticatedDatasetsRoute,
+  AuthenticatedMasterRoute: AuthenticatedMasterRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedQualityRoute: AuthenticatedQualityRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
