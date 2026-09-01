@@ -11,7 +11,7 @@ const NAV = [
   { to: "/datasets", label: "Datasets", soon: false },
   { to: "/quality", label: "Quality", soon: false },
   { to: "/compare", label: "Compare", soon: false },
-  { to: "/reconcile", label: "Reconcile", soon: true },
+  { to: "/reconcile", label: "Reconcile", soon: false },
   { to: "/master", label: "Master", soon: true },
   { to: "/explore", label: "Explore", soon: true },
   { to: "/riders", label: "Riders", soon: true },

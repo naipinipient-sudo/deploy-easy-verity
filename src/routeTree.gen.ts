@@ -18,6 +18,7 @@ import { Route as AuthenticatedCompareRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDatasetsRouteImport } from './routes/_authenticated/datasets'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedQualityRouteImport } from './routes/_authenticated/quality'
+import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedWorkspacesIndexRouteImport } from './routes/_authenticated/workspaces/index'
 import { Route as AuthenticatedWorkspacesNewRouteImport } from './routes/_authenticated/workspaces/new'
@@ -66,6 +67,11 @@ const AuthenticatedQualityRoute = AuthenticatedQualityRouteImport.update({
   path: '/quality',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReconcileRoute = AuthenticatedReconcileRouteImport.update({
+  id: '/reconcile',
+  path: '/reconcile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/datasets': typeof AuthenticatedDatasetsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/quality': typeof AuthenticatedQualityRoute
+  '/reconcile': typeof AuthenticatedReconcileRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/datasets': typeof AuthenticatedDatasetsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/quality': typeof AuthenticatedQualityRoute
+  '/reconcile': typeof AuthenticatedReconcileRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces': typeof AuthenticatedWorkspacesIndexRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/_authenticated/datasets': typeof AuthenticatedDatasetsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/quality': typeof AuthenticatedQualityRoute
+  '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/_authenticated/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/datasets'
     | '/overview'
     | '/quality'
+    | '/reconcile'
     | '/settings'
     | '/workspaces/new'
     | '/workspaces/'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/datasets'
     | '/overview'
     | '/quality'
+    | '/reconcile'
     | '/settings'
     | '/workspaces/new'
     | '/workspaces'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/_authenticated/datasets'
     | '/_authenticated/overview'
     | '/_authenticated/quality'
+    | '/_authenticated/reconcile'
     | '/_authenticated/settings'
     | '/_authenticated/workspaces/new'
     | '/_authenticated/workspaces/'
@@ -241,6 +253,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedQualityRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/reconcile': {
+      id: '/_authenticated/reconcile'
+      path: '/reconcile'
+      fullPath: '/reconcile'
+      preLoaderRoute: typeof AuthenticatedReconcileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -270,6 +289,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDatasetsRoute: typeof AuthenticatedDatasetsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedQualityRoute: typeof AuthenticatedQualityRoute
+  AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedWorkspacesNewRoute: typeof AuthenticatedWorkspacesNewRoute
   AuthenticatedWorkspacesIndexRoute: typeof AuthenticatedWorkspacesIndexRoute
@@ -280,6 +300,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDatasetsRoute: AuthenticatedDatasetsRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedQualityRoute: AuthenticatedQualityRoute,
+  AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedWorkspacesNewRoute: AuthenticatedWorkspacesNewRoute,
   AuthenticatedWorkspacesIndexRoute: AuthenticatedWorkspacesIndexRoute,
