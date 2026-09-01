@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as MfaChallengeRouteImport } from './routes/mfa-challenge'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedCompareRouteImport } from './routes/_authenticated/compare'
 import { Route as AuthenticatedDatasetsRouteImport } from './routes/_authenticated/datasets'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedQualityRouteImport } from './routes/_authenticated/quality'
@@ -44,6 +45,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedCompareRoute = AuthenticatedCompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDatasetsRoute = AuthenticatedDatasetsRouteImport.update({
   id: '/datasets',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/mfa-challenge': typeof MfaChallengeRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/compare': typeof AuthenticatedCompareRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/quality': typeof AuthenticatedQualityRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/mfa-challenge': typeof MfaChallengeRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/compare': typeof AuthenticatedCompareRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/quality': typeof AuthenticatedQualityRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/mfa-challenge': typeof MfaChallengeRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/compare': typeof AuthenticatedCompareRoute
   '/_authenticated/datasets': typeof AuthenticatedDatasetsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/quality': typeof AuthenticatedQualityRoute
@@ -123,6 +132,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mfa-challenge'
     | '/reset-password'
+    | '/compare'
     | '/datasets'
     | '/overview'
     | '/quality'
@@ -135,6 +145,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mfa-challenge'
     | '/reset-password'
+    | '/compare'
     | '/datasets'
     | '/overview'
     | '/quality'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mfa-challenge'
     | '/reset-password'
+    | '/_authenticated/compare'
     | '/_authenticated/datasets'
     | '/_authenticated/overview'
     | '/_authenticated/quality'
@@ -201,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/compare': {
+      id: '/_authenticated/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof AuthenticatedCompareRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/datasets': {
       id: '/_authenticated/datasets'
       path: '/datasets'
@@ -247,6 +266,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCompareRoute: typeof AuthenticatedCompareRoute
   AuthenticatedDatasetsRoute: typeof AuthenticatedDatasetsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedQualityRoute: typeof AuthenticatedQualityRoute
@@ -256,6 +276,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCompareRoute: AuthenticatedCompareRoute,
   AuthenticatedDatasetsRoute: AuthenticatedDatasetsRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedQualityRoute: AuthenticatedQualityRoute,
