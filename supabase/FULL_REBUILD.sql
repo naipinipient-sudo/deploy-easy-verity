@@ -1,11 +1,15 @@
--- One-time helper: run this ONCE in the Supabase SQL Editor of the
--- eoqbqklfvddegdqzkxax project to replace the old hand-rolled schema
--- with the Lovable-generated one (full PRD data model) plus the raw-file
--- storage bucket. Not a migration file itself -- the migrations/ folder
--- is the source of truth going forward.
+-- One-time authoritative rebuild for the live project. Discovered via
+-- direct `supabase db query` introspection on 2026-09-01 that RESET_AND_APPLY.sql
+-- and the domain-restriction trigger were never actually applied to this
+-- database, despite being marked "done" -- the live schema was still the
+-- original pre-Lovable scaffold (workspaces/datasets/dataset_versions with
+-- version_number, no dataset_rows/quality_findings/compare_runs/etc).
+-- This drops that scaffold and brings the schema fully in line with what
+-- every route in the app actually queries.
 
--- 1) Drop the old schema (from the first scaffold)
+-- 1) Drop the old scaffold
 drop table if exists audit_events cascade;
+drop table if exists saved_views cascade;
 drop table if exists dataset_versions cascade;
 drop table if exists datasets cascade;
 drop table if exists workspace_members cascade;
@@ -15,10 +19,10 @@ drop function if exists can_write_workspace(uuid) cascade;
 drop function if exists is_workspace_member(uuid) cascade;
 drop policy if exists "members can read their workspace uploads" on storage.objects;
 drop policy if exists "writers can upload to their workspace" on storage.objects;
-delete from storage.buckets where id = 'dataset-uploads';
+drop trigger if exists enforce_email_domain_before_insert on auth.users;
+drop function if exists public.enforce_email_domain() cascade;
 
--- 2) Lovable's core schema (supabase/migrations/20260831092731_*.sql)
--- profiles
+-- 2) Lovable's core schema
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY,
   email TEXT,
@@ -43,7 +47,6 @@ END; $$;
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- roles
 CREATE TYPE public.workspace_role AS ENUM ('owner','admin','editor','analyst','viewer');
 
 CREATE TABLE public.workspaces (
@@ -107,7 +110,6 @@ CREATE POLICY "wm_insert_self_owner" ON public.workspace_members FOR INSERT TO a
 CREATE POLICY "wm_update" ON public.workspace_members FOR UPDATE TO authenticated USING (public.is_workspace_admin(workspace_id)) WITH CHECK (public.is_workspace_admin(workspace_id));
 CREATE POLICY "wm_delete" ON public.workspace_members FOR DELETE TO authenticated USING (public.is_workspace_admin(workspace_id));
 
--- datasets
 CREATE TABLE public.datasets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
@@ -124,6 +126,7 @@ CREATE TABLE public.dataset_versions (
   dataset_id UUID NOT NULL REFERENCES public.datasets(id) ON DELETE CASCADE,
   version_no INTEGER NOT NULL DEFAULT 1,
   file_name TEXT NOT NULL,
+  file_path TEXT,
   sheet_name TEXT,
   checksum TEXT,
   row_count INTEGER NOT NULL DEFAULT 0,
@@ -257,10 +260,21 @@ CREATE TABLE public.ai_conversations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE public.saved_views (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  source_type TEXT NOT NULL CHECK (source_type IN ('dataset_version', 'master_version')),
+  source_id UUID NOT NULL,
+  config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 DO $$
 DECLARE t TEXT;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['datasets','dataset_versions','dataset_rows','quality_findings','compare_runs','reconciliation_runs','reconciliation_items','master_datasets','master_versions','master_rows','audit_events','ai_conversations']
+  FOREACH t IN ARRAY ARRAY['datasets','dataset_versions','dataset_rows','quality_findings','compare_runs','reconciliation_runs','reconciliation_items','master_datasets','master_versions','master_rows','audit_events','ai_conversations','saved_views']
   LOOP
     EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON public.%I TO authenticated', t);
     EXECUTE format('GRANT ALL ON public.%I TO service_role', t);
@@ -275,7 +289,6 @@ END $$;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
--- 3) Permission tightening (supabase/migrations/20260831092814_*.sql)
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.is_workspace_member(UUID) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.can_write_workspace(UUID) FROM PUBLIC, anon;
@@ -284,9 +297,7 @@ GRANT EXECUTE ON FUNCTION public.is_workspace_member(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.can_write_workspace(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_workspace_admin(UUID) TO authenticated;
 
--- 4) Raw file storage bucket (supabase/migrations/20260831110000_*.sql)
-insert into storage.buckets (id, name, public) values ('dataset-uploads', 'dataset-uploads', false);
-
+-- 3) Raw file storage bucket policies (bucket itself already exists)
 create policy "members can read their workspace uploads" on storage.objects
   for select using (
     bucket_id = 'dataset-uploads'
@@ -298,5 +309,16 @@ create policy "writers can upload to their workspace" on storage.objects
     and public.can_write_workspace((storage.foldername(name))[1]::uuid)
   );
 
--- 5) file_path column (supabase/migrations/20260831110100_*.sql)
-alter table public.dataset_versions add column file_path text;
+-- 4) Domain-restricted signup
+CREATE OR REPLACE FUNCTION public.enforce_email_domain()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NEW.email NOT ILIKE '%@dashelectric.co' THEN
+    RAISE EXCEPTION 'Only @dashelectric.co email addresses can sign up.';
+  END IF;
+  RETURN NEW;
+END; $$;
+
+CREATE TRIGGER enforce_email_domain_before_insert
+BEFORE INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.enforce_email_domain();
