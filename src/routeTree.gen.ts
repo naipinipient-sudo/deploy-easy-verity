@@ -16,6 +16,7 @@ import { Route as MfaChallengeRouteImport } from './routes/mfa-challenge'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedDatasetsRouteImport } from './routes/_authenticated/datasets'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
+import { Route as AuthenticatedQualityRouteImport } from './routes/_authenticated/quality'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedWorkspacesIndexRouteImport } from './routes/_authenticated/workspaces/index'
 import { Route as AuthenticatedWorkspacesNewRouteImport } from './routes/_authenticated/workspaces/new'
@@ -54,6 +55,11 @@ const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
   path: '/overview',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedQualityRoute = AuthenticatedQualityRouteImport.update({
+  id: '/quality',
+  path: '/quality',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/quality': typeof AuthenticatedQualityRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/quality': typeof AuthenticatedQualityRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces': typeof AuthenticatedWorkspacesIndexRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/datasets': typeof AuthenticatedDatasetsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
+  '/_authenticated/quality': typeof AuthenticatedQualityRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/_authenticated/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/datasets'
     | '/overview'
+    | '/quality'
     | '/settings'
     | '/workspaces/new'
     | '/workspaces/'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/datasets'
     | '/overview'
+    | '/quality'
     | '/settings'
     | '/workspaces/new'
     | '/workspaces'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/datasets'
     | '/_authenticated/overview'
+    | '/_authenticated/quality'
     | '/_authenticated/settings'
     | '/_authenticated/workspaces/new'
     | '/_authenticated/workspaces/'
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOverviewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/quality': {
+      id: '/_authenticated/quality'
+      path: '/quality'
+      fullPath: '/quality'
+      preLoaderRoute: typeof AuthenticatedQualityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -230,6 +249,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDatasetsRoute: typeof AuthenticatedDatasetsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
+  AuthenticatedQualityRoute: typeof AuthenticatedQualityRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedWorkspacesNewRoute: typeof AuthenticatedWorkspacesNewRoute
   AuthenticatedWorkspacesIndexRoute: typeof AuthenticatedWorkspacesIndexRoute
@@ -238,6 +258,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDatasetsRoute: AuthenticatedDatasetsRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
+  AuthenticatedQualityRoute: AuthenticatedQualityRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedWorkspacesNewRoute: AuthenticatedWorkspacesNewRoute,
   AuthenticatedWorkspacesIndexRoute: AuthenticatedWorkspacesIndexRoute,

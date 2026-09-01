@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/datasets", label: "Datasets", soon: false },
-  { to: "/quality", label: "Quality", soon: true },
+  { to: "/quality", label: "Quality", soon: false },
   { to: "/compare", label: "Compare", soon: true },
   { to: "/reconcile", label: "Reconcile", soon: true },
   { to: "/master", label: "Master", soon: true },

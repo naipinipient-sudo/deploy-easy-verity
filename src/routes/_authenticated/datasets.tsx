@@ -21,6 +21,7 @@ import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { listAuditEvents } from "@/lib/verity/workspaces";
+import { computeQualityFindings, insertQualityFindings } from "@/lib/verity/quality";
 import { CANONICAL_FIELDS } from "@/lib/verity/canonical";
 import {
   MAX_FILE_BYTES,
@@ -318,7 +319,14 @@ function UploadPanel({
         details: { datasetId, versionNo, rowCount: parsed.rowCount },
       });
 
-      toast.success(`Imported ${parsed.rowCount} rows.`);
+      const findings = computeQualityFindings(profile.columns, mapping, parsed.rowCount);
+      await insertQualityFindings(workspaceId, version.id, findings);
+
+      toast.success(
+        findings.length > 0
+          ? `Imported ${parsed.rowCount} rows — ${findings.length} quality finding(s) to review.`
+          : `Imported ${parsed.rowCount} rows.`,
+      );
       await queryClient.invalidateQueries({ queryKey: ["datasets", workspaceId] });
       reset();
     } catch (error) {
