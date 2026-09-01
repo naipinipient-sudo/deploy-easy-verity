@@ -69,6 +69,10 @@ function AuthPage() {
 
   const signUp = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!email.toLowerCase().endsWith("@dashelectric.co")) {
+      toast.error("Only @dashelectric.co email addresses can sign up.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -162,10 +166,12 @@ function AuthPage() {
                     id="signup-email"
                     type="email"
                     autoComplete="email"
+                    placeholder="you@dashelectric.co"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">Only @dashelectric.co addresses can sign up.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
