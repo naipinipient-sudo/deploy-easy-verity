@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createWorkspace } from "@/lib/verity/workspaces";
 import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
+import { describeError } from "@/lib/verity/errors";
 
 export const Route = createFileRoute("/_authenticated/workspaces/new")({
   component: NewWorkspacePage,
@@ -35,7 +36,7 @@ function NewWorkspacePage() {
       selectWorkspace(workspace.id);
       navigate({ to: "/datasets" });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create workspace");
+      toast.error(describeError(error, "Could not create workspace"));
     } finally {
       setBusy(false);
     }
