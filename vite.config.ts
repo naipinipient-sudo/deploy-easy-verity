@@ -12,4 +12,10 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Overrides the Lovable wrapper's cloudflare-module default. Only takes
+  // effect outside Lovable's own build sandbox (there it's pinned to
+  // cloudflare-module / lovable-fetch-bundle regardless of this setting).
+  nitro: {
+    preset: "netlify",
+  },
 });
