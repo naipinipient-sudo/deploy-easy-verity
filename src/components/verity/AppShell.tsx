@@ -13,8 +13,8 @@ const NAV = [
   { to: "/compare", label: "Compare", soon: false },
   { to: "/reconcile", label: "Reconcile", soon: false },
   { to: "/master", label: "Master", soon: false },
-  { to: "/explore", label: "Explore", soon: true },
-  { to: "/riders", label: "Riders", soon: true },
+  { to: "/explore", label: "Explore", soon: false },
+  { to: "/riders", label: "Riders", soon: false },
   { to: "/ai-analyst", label: "AI analyst", soon: true },
   { to: "/settings", label: "Settings", soon: false },
 ] as const;
