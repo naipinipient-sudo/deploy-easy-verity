@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LangToggle } from "@/components/verity/LangToggle";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/mfa-challenge")({
   component: MfaChallengePage,
@@ -13,6 +15,7 @@ export const Route = createFileRoute("/mfa-challenge")({
 
 function MfaChallengePage() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const [factorId, setFactorId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,7 +32,7 @@ function MfaChallengePage() {
       const { data, error } = await supabase.auth.mfa.listFactors();
       const firstFactor = data?.totp?.[0];
       if (error || !firstFactor) {
-        toast.error("No authenticator app is enrolled on this account.");
+        toast.error(t("mfa.noFactor"));
         navigate({ to: "/auth" });
         return;
       }
@@ -62,19 +65,20 @@ function MfaChallengePage() {
   return (
     <div className="flex min-h-screen items-center justify-center grid-noise px-4 py-12">
       <div className="w-full max-w-sm">
-        <Link to="/" className="mb-6 flex items-center justify-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
-          <span className="font-display text-lg font-semibold">Verity</span>
-        </Link>
+        <div className="mb-6 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
+            <span className="font-display text-lg font-semibold">Verity</span>
+          </Link>
+          <LangToggle />
+        </div>
         <form className="panel space-y-4 p-6" onSubmit={verify}>
           <div>
-            <h2 className="text-lg font-bold">Enter your authenticator code</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Open your authenticator app and enter the 6-digit code for Verity.
-            </p>
+            <h2 className="text-lg font-bold">{t("mfa.title")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t("mfa.body")}</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="mfa-code">Code</Label>
+            <Label htmlFor="mfa-code">{t("mfa.code")}</Label>
             <Input
               id="mfa-code"
               inputMode="numeric"
@@ -88,7 +92,7 @@ function MfaChallengePage() {
           </div>
           <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            Verify
+            {t("mfa.verify")}
           </Button>
         </form>
       </div>

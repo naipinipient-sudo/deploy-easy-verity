@@ -33,7 +33,7 @@ import { LoadingState, EmptyState, ErrorState } from "@/components/verity/states
 import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
 import { useAuth } from "@/hooks/useAuth";
 import { describeError } from "@/lib/verity/errors";
-import { CANONICAL_FIELDS } from "@/lib/verity/canonical";
+import { useLang } from "@/lib/i18n";
 import {
   listExploreSources,
   loadExploreSource,
@@ -50,54 +50,54 @@ export const Route = createFileRoute("/_authenticated/explore")({
   component: ExplorePage,
 });
 
-const FIELD_LABEL = new Map(CANONICAL_FIELDS.map((f) => [f.key, f.label]));
-function label(field: string) {
-  return FIELD_LABEL.get(field as never) ?? field;
+function label(field: string, t: (key: string) => string) {
+  return t(`canonical.${field}`);
 }
 
-const FILTER_OPS: { value: FilterOp; label: string; needsValue: boolean }[] = [
-  { value: "eq", label: "=", needsValue: true },
-  { value: "neq", label: "≠", needsValue: true },
-  { value: "contains", label: "contains", needsValue: true },
-  { value: "gt", label: ">", needsValue: true },
-  { value: "gte", label: "≥", needsValue: true },
-  { value: "lt", label: "<", needsValue: true },
-  { value: "lte", label: "≤", needsValue: true },
-  { value: "blank", label: "is blank", needsValue: false },
-  { value: "not_blank", label: "is not blank", needsValue: false },
+const FILTER_OPS: { value: FilterOp; labelKey: string; needsValue: boolean }[] = [
+  { value: "eq", labelKey: "opEquals", needsValue: true },
+  { value: "neq", labelKey: "opNotEquals", needsValue: true },
+  { value: "contains", labelKey: "opContains", needsValue: true },
+  { value: "gt", labelKey: "opGreaterThan", needsValue: true },
+  { value: "gte", labelKey: "opGreaterEquals", needsValue: true },
+  { value: "lt", labelKey: "opLessThan", needsValue: true },
+  { value: "lte", labelKey: "opLessEquals", needsValue: true },
+  { value: "blank", labelKey: "opBlank", needsValue: false },
+  { value: "not_blank", labelKey: "opNotBlank", needsValue: false },
 ];
 
-const AGG_TYPES: { value: AggType; label: string }[] = [
-  { value: "sum", label: "Sum" },
-  { value: "avg", label: "Average" },
-  { value: "count", label: "Count" },
-  { value: "count_distinct", label: "Count distinct" },
-  { value: "min", label: "Min" },
-  { value: "max", label: "Max" },
+const AGG_TYPES: { value: AggType; labelKey: string }[] = [
+  { value: "sum", labelKey: "aggSum" },
+  { value: "avg", labelKey: "aggAvg" },
+  { value: "count", labelKey: "aggCount" },
+  { value: "count_distinct", labelKey: "aggCountDistinct" },
+  { value: "min", labelKey: "aggMin" },
+  { value: "max", labelKey: "aggMax" },
 ];
 
 type ChartType = "table" | "bar" | "line" | "area" | "kpi";
 
 function ExplorePage() {
+  const { t } = useLang();
   const { activeWorkspace, isLoading: workspaceLoading } = useActiveWorkspace();
 
   if (workspaceLoading) {
     return (
-      <AppShell title="Explore">
-        <LoadingState label="Loading workspace" />
+      <AppShell title={t("explore.title")}>
+        <LoadingState label={t("common.loadingWorkspace")} />
       </AppShell>
     );
   }
   if (!activeWorkspace) {
     return (
-      <AppShell title="Explore">
+      <AppShell title={t("explore.title")}>
         <EmptyState
           icon={<Compass className="h-5 w-5" aria-hidden />}
-          title="No workspace selected"
-          description="Create or pick a workspace first."
+          title={t("common.noWorkspaceSelected")}
+          description={t("common.pickWorkspaceFirst")}
           action={
             <Button asChild size="sm">
-              <Link to="/workspaces/new">Create workspace</Link>
+              <Link to="/workspaces/new">{t("workspaces.createWorkspace")}</Link>
             </Button>
           }
         />
@@ -108,6 +108,7 @@ function ExplorePage() {
 }
 
 function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
+  const { t } = useLang();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [source, setSource] = useState<ExploreSourceOption | null>(null);
@@ -181,23 +182,23 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
       });
       setViewName("");
       await queryClient.invalidateQueries({ queryKey: ["saved-views", source.type, source.id] });
-      toast.success("View saved");
+      toast.success(t("explore.viewSaved"));
     } catch (error) {
-      toast.error(describeError(error, "Could not save view"));
+      toast.error(describeError(error, t("explore.couldNotSaveView")));
     }
   };
 
   return (
     <AppShell
-      title="Explore"
-      description="Browse, filter, pivot, and chart a dataset or master version. Nothing here writes back to a source."
+      title={t("explore.title")}
+      description={t("explore.description")}
     >
       <div className="space-y-6">
         <div className="panel flex flex-wrap items-end gap-4 p-4">
           <div className="min-w-64 space-y-2">
-            <Label>Source</Label>
+            <Label>{t("explore.sourceLabel")}</Label>
             {sourcesQuery.isLoading ? (
-              <LoadingState label="Loading sources" rows={1} />
+              <LoadingState label={t("explore.loadingSources")} rows={1} />
             ) : (
               <Select
                 value={source ? `${source.type}:${source.id}` : ""}
@@ -210,12 +211,12 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pick a dataset or master version" />
+                  <SelectValue placeholder={t("explore.sourcePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {(sourcesQuery.data ?? []).map((s) => (
                     <SelectItem key={`${s.type}:${s.id}`} value={`${s.type}:${s.id}`}>
-                      {s.label} ({s.rowCount} rows)
+                      {t("explore.sourceOption", { label: s.label, count: s.rowCount })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -225,7 +226,7 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
 
           {savedViewsQuery.data && savedViewsQuery.data.length > 0 && (
             <div className="min-w-56 space-y-2">
-              <Label>Saved views</Label>
+              <Label>{t("explore.savedViewsLabel")}</Label>
               <Select
                 onValueChange={(id) => {
                   const view = savedViewsQuery.data!.find((v) => v.id === id);
@@ -233,7 +234,7 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Apply a saved view" />
+                  <SelectValue placeholder={t("explore.savedViewPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {savedViewsQuery.data.map((v) => (
@@ -250,24 +251,26 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
         {!source ? (
           <EmptyState
             icon={<Compass className="h-5 w-5" aria-hidden />}
-            title="Pick a source to explore"
-            description="Choose a dataset version or a published master version above."
+            title={t("explore.pickSourceTitle")}
+            description={t("explore.pickSourceDescription")}
           />
         ) : dataQuery.isLoading ? (
-          <LoadingState label="Loading rows" />
+          <LoadingState label={t("explore.loadingRows")} />
         ) : dataQuery.isError ? (
-          <ErrorState message={describeError(dataQuery.error, "Could not load rows")} />
+          <ErrorState message={describeError(dataQuery.error, t("explore.couldNotLoadRows"))} />
         ) : (
           <>
             <div className="panel space-y-3 p-4">
               <div className="flex items-center justify-between">
-                <Label>Filters</Label>
+                <Label>{t("explore.filtersLabel")}</Label>
                 <Button size="sm" variant="outline" onClick={addFilter}>
-                  Add filter
+                  {t("explore.addFilter")}
                 </Button>
               </div>
               {filters.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No filters — showing all {processedRows.length} rows.</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("explore.noFilters", { count: processedRows.length })}
+                </p>
               ) : (
                 <div className="space-y-2">
                   {filters.map((f, i) => {
@@ -281,7 +284,7 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                           <SelectContent>
                             {fields.map((field) => (
                               <SelectItem key={field} value={field}>
-                                {label(field)}
+                                {label(field, t)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -293,7 +296,7 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                           <SelectContent>
                             {FILTER_OPS.map((o) => (
                               <SelectItem key={o.value} value={o.value}>
-                                {o.label}
+                                {t(`explore.${o.labelKey}`)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -311,18 +314,20 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                       </div>
                     );
                   })}
-                  <p className="text-xs text-muted-foreground">{processedRows.length} of {dataQuery.data!.rows.length} rows match.</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("explore.filtersMatch", { matched: processedRows.length, total: dataQuery.data!.rows.length })}
+                  </p>
                 </div>
               )}
               <div className="flex flex-wrap items-end gap-2 border-t-2 border-border pt-3">
                 <Input
-                  placeholder="View name"
+                  placeholder={t("explore.viewNamePlaceholder")}
                   className="w-48"
                   value={viewName}
                   onChange={(e) => setViewName(e.target.value)}
                 />
                 <Button size="sm" onClick={saveView} disabled={!viewName.trim()}>
-                  Save view
+                  {t("explore.saveView")}
                 </Button>
                 {savedViewsQuery.data?.map((v) => (
                   <Button
@@ -333,17 +338,17 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                       await deleteSavedView(v.id);
                       await queryClient.invalidateQueries({ queryKey: ["saved-views", source.type, source.id] });
                     }}
-                    title={`Delete "${v.name}"`}
+                    title={t("explore.deleteView", { name: v.name })}
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden /> {v.name}
                   </Button>
                 ))}
                 <div className="ml-auto flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => exportRows(processedRows, fields, source.label, "csv")}>
-                    <Download className="mr-1 h-3.5 w-3.5" aria-hidden /> CSV
+                    <Download className="mr-1 h-3.5 w-3.5" aria-hidden /> {t("explore.exportCsv")}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => exportRows(processedRows, fields, source.label, "xlsx")}>
-                    <Download className="mr-1 h-3.5 w-3.5" aria-hidden /> XLSX
+                    <Download className="mr-1 h-3.5 w-3.5" aria-hidden /> {t("explore.exportXlsx")}
                   </Button>
                 </div>
               </div>
@@ -352,17 +357,17 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
             <div className="panel space-y-3 p-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-2">
-                  <Label>View as</Label>
+                  <Label>{t("explore.viewAsLabel")}</Label>
                   <Select value={chartType} onValueChange={(v) => setChartType(v as ChartType)}>
                     <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="table">Table</SelectItem>
-                      <SelectItem value="bar">Bar</SelectItem>
-                      <SelectItem value="line">Line</SelectItem>
-                      <SelectItem value="area">Area</SelectItem>
-                      <SelectItem value="kpi">KPI card</SelectItem>
+                      <SelectItem value="table">{t("explore.chartTable")}</SelectItem>
+                      <SelectItem value="bar">{t("explore.chartBar")}</SelectItem>
+                      <SelectItem value="line">{t("explore.chartLine")}</SelectItem>
+                      <SelectItem value="area">{t("explore.chartArea")}</SelectItem>
+                      <SelectItem value="kpi">{t("explore.chartKpi")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -370,15 +375,15 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                   <>
                     {chartType !== "kpi" && (
                       <div className="space-y-2">
-                        <Label>Group by (dimension)</Label>
+                        <Label>{t("explore.groupByLabel")}</Label>
                         <Select value={dimensionField ?? ""} onValueChange={setDimensionField}>
                           <SelectTrigger className="w-44">
-                            <SelectValue placeholder="Pick a field" />
+                            <SelectValue placeholder={t("explore.fieldPlaceholder")} />
                           </SelectTrigger>
                           <SelectContent>
                             {fields.map((f) => (
                               <SelectItem key={f} value={f}>
-                                {label(f)}
+                                {label(f, t)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -386,23 +391,23 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                       </div>
                     )}
                     <div className="space-y-2">
-                      <Label>Measure</Label>
+                      <Label>{t("explore.measureLabel")}</Label>
                       <Select value={measureField ?? "__count__"} onValueChange={(v) => setMeasureField(v === "__count__" ? null : v)}>
                         <SelectTrigger className="w-44">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__count__">Row count</SelectItem>
+                          <SelectItem value="__count__">{t("explore.rowCountOption")}</SelectItem>
                           {fields.map((f) => (
                             <SelectItem key={f} value={f}>
-                              {label(f)}
+                              {label(f, t)}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Aggregation</Label>
+                      <Label>{t("explore.aggregationLabel")}</Label>
                       <Select value={aggType} onValueChange={(v) => setAggType(v as AggType)}>
                         <SelectTrigger className="w-40">
                           <SelectValue />
@@ -410,7 +415,7 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                         <SelectContent>
                           {AGG_TYPES.map((a) => (
                             <SelectItem key={a.value} value={a.value}>
-                              {a.label}
+                              {t(`explore.${a.labelKey}`)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -428,7 +433,10 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
               {chartType === "kpi" && (
                 <div className="border-2 border-border bg-secondary p-8 text-center">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {AGG_TYPES.find((a) => a.value === aggType)?.label} of {measureField ? label(measureField) : "rows"}
+                    {t("explore.kpiOf", {
+                      agg: t(`explore.${AGG_TYPES.find((a) => a.value === aggType)!.labelKey}`),
+                      field: measureField ? label(measureField, t) : t("explore.rowsFallback"),
+                    })}
                   </p>
                   <p className="mt-2 text-4xl font-bold">{kpiValue !== null ? formatNumber(kpiValue) : processedRows.length}</p>
                 </div>
@@ -466,7 +474,7 @@ function ExploreForWorkspace({ workspaceId }: { workspaceId: string }) {
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Pick a dimension to group by.</p>
+                  <p className="text-sm text-muted-foreground">{t("explore.pickDimension")}</p>
                 )
               )}
             </div>
@@ -494,6 +502,7 @@ function RowTable({
   sortDir: "asc" | "desc";
   onSort: (field: string) => void;
 }) {
+  const { t } = useLang();
   const shown = rows.slice(0, 200);
   return (
     <div className="max-h-[32rem] overflow-auto border-2 border-border">
@@ -502,7 +511,7 @@ function RowTable({
           <TableRow>
             {fields.map((f) => (
               <TableHead key={f} className="cursor-pointer select-none whitespace-nowrap" onClick={() => onSort(f)}>
-                {label(f)} {sortField === f ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                {label(f, t)} {sortField === f ? (sortDir === "asc" ? "↑" : "↓") : ""}
               </TableHead>
             ))}
           </TableRow>
@@ -521,10 +530,10 @@ function RowTable({
       </Table>
       {rows.length > 200 && (
         <p className="border-t-2 border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
-          Showing first 200 of {rows.length} rows. Export for the full set.
+          {t("explore.showingFirst", { rows: rows.length })}
         </p>
       )}
-      {rows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">No rows match.</p>}
+      {rows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{t("explore.noRowsMatch")}</p>}
     </div>
   );
 }

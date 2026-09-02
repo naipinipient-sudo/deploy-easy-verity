@@ -18,8 +18,8 @@ import {
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { LoadingState, EmptyState, ErrorState } from "@/components/verity/states";
 import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
+import { useLang } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
-import { CANONICAL_FIELDS } from "@/lib/verity/canonical";
 import { listVersionOptions, commonMappedFields } from "@/lib/verity/compare";
 import {
   runReconciliation,
@@ -34,24 +34,25 @@ export const Route = createFileRoute("/_authenticated/reconcile")({
 
 function ReconcilePage() {
   const { activeWorkspace, isLoading: workspaceLoading } = useActiveWorkspace();
+  const { t } = useLang();
 
   if (workspaceLoading) {
     return (
-      <AppShell title="Reconcile">
-        <LoadingState label="Loading workspace" />
+      <AppShell title={t("reconcile.title")}>
+        <LoadingState label={t("common.loadingWorkspace")} />
       </AppShell>
     );
   }
   if (!activeWorkspace) {
     return (
-      <AppShell title="Reconcile">
+      <AppShell title={t("reconcile.title")}>
         <EmptyState
           icon={<Scale className="h-5 w-5" aria-hidden />}
-          title="No workspace selected"
-          description="Create or pick a workspace first."
+          title={t("common.noWorkspaceSelected")}
+          description={t("common.pickWorkspaceFirst")}
           action={
             <Button asChild size="sm">
-              <Link to="/workspaces/new">Create workspace</Link>
+              <Link to="/workspaces/new">{t("workspaces.createWorkspace")}</Link>
             </Button>
           }
         />
@@ -62,6 +63,7 @@ function ReconcilePage() {
 }
 
 function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
+  const { t } = useLang();
   const versionsQuery = useQuery({
     queryKey: ["dataset-versions-options", workspaceId],
     queryFn: () => listVersionOptions(workspaceId),
@@ -105,9 +107,9 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
         userId: userData.user.id,
       });
       setRunId(outcome.runId);
-      toast.success(`Reconciliation run created — ${outcome.items.length} item(s) to review.`);
+      toast.success(t("reconcile.runCreatedToast", { count: outcome.items.length }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Reconciliation failed");
+      toast.error(error instanceof Error ? error.message : t("reconcile.runFailedToast"));
     } finally {
       setBusy(false);
     }
@@ -115,16 +117,15 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
 
   if (versionsQuery.isLoading) {
     return (
-      <AppShell title="Reconcile">
-        <LoadingState label="Loading datasets" />
+      <AppShell title={t("reconcile.title")}>
+        <LoadingState label={t("reconcile.loadingDatasets")} />
       </AppShell>
     );
   }
   const versions = versionsQuery.data ?? [];
-  const fieldLabel = (key: string) => CANONICAL_FIELDS.find((f) => f.key === key)?.label ?? key;
 
   return (
-    <AppShell title="Reconcile" description="Scored candidate matches across a key field, with amount/date tolerance.">
+    <AppShell title={t("reconcile.title")} description={t("reconcile.description")}>
       {runId ? (
         <ReviewQueue workspaceId={workspaceId} runId={runId} onBack={() => setRunId(null)} />
       ) : (
@@ -132,11 +133,11 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
           {versions.length < 2 ? (
             <EmptyState
               icon={<Scale className="h-5 w-5" aria-hidden />}
-              title="Need at least two dataset versions"
-              description="Import at least two versions before reconciling."
+              title={t("reconcile.needTwoVersionsTitle")}
+              description={t("reconcile.needTwoVersionsDescription")}
               action={
                 <Button asChild size="sm">
-                  <Link to="/datasets">Go to Datasets</Link>
+                  <Link to="/datasets">{t("reconcile.goToDatasets")}</Link>
                 </Button>
               }
             />
@@ -144,10 +145,10 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
             <>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <Label>Version A</Label>
+                  <Label>{t("reconcile.versionALabel")}</Label>
                   <Select value={leftId} onValueChange={setLeftId}>
                     <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Pick a version" />
+                      <SelectValue placeholder={t("reconcile.pickVersionPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {versions.map((v) => (
@@ -159,10 +160,10 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
                   </Select>
                 </div>
                 <div>
-                  <Label>Version B</Label>
+                  <Label>{t("reconcile.versionBLabel")}</Label>
                   <Select value={rightId} onValueChange={setRightId}>
                     <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Pick a version" />
+                      <SelectValue placeholder={t("reconcile.pickVersionPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {versions.map((v) => (
@@ -174,15 +175,21 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
                   </Select>
                 </div>
                 <div>
-                  <Label>Key field</Label>
+                  <Label>{t("reconcile.keyFieldLabel")}</Label>
                   <Select value={keyField} onValueChange={setKeyField} disabled={availableKeys.length === 0}>
                     <SelectTrigger className="mt-2">
-                      <SelectValue placeholder={availableKeys.length === 0 ? "Pick both versions first" : "Pick a key"} />
+                      <SelectValue
+                        placeholder={
+                          availableKeys.length === 0
+                            ? t("reconcile.pickBothVersionsFirst")
+                            : t("reconcile.pickKeyPlaceholder")
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {availableKeys.map((k) => (
                         <SelectItem key={k} value={k}>
-                          {fieldLabel(k)}
+                          {t(`canonical.${k}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -191,7 +198,7 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label>Amount tolerance (±)</Label>
+                  <Label>{t("reconcile.amountToleranceLabel")}</Label>
                   <Input
                     className="mt-2"
                     type="number"
@@ -202,7 +209,7 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
                   />
                 </div>
                 <div>
-                  <Label>Date tolerance (± days)</Label>
+                  <Label>{t("reconcile.dateToleranceLabel")}</Label>
                   <Input
                     className="mt-2"
                     type="number"
@@ -214,7 +221,7 @@ function ReconcileForWorkspace({ workspaceId }: { workspaceId: string }) {
                 </div>
               </div>
               <Button onClick={run} disabled={busy || !leftId || !rightId || !keyField}>
-                {busy ? "Running…" : "Run reconciliation"}
+                {busy ? t("reconcile.running") : t("reconcile.runReconciliation")}
               </Button>
             </>
           )}
@@ -233,6 +240,7 @@ const STATE_VARIANT = {
 } as const;
 
 function ReviewQueue({ workspaceId, runId, onBack }: { workspaceId: string; runId: string; onBack: () => void }) {
+  const { t } = useLang();
   const queryClient = useQueryClient();
   const [stateFilter, setStateFilter] = useState<string>("proposed");
   const [overriding, setOverriding] = useState<ReconciliationItemRow | null>(null);
@@ -250,7 +258,7 @@ function ReviewQueue({ workspaceId, runId, onBack }: { workspaceId: string; runI
       await decideItem({ workspaceId, itemId: item.id, decision, isOverride, note, userId: userData.user.id });
       invalidate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save decision");
+      toast.error(error instanceof Error ? error.message : t("reconcile.decisionFailedToast"));
     }
   };
 
@@ -264,7 +272,7 @@ function ReviewQueue({ workspaceId, runId, onBack }: { workspaceId: string; runI
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Button variant="outline" size="sm" onClick={onBack}>
-          ← New run
+          {t("reconcile.newRun")}
         </Button>
         <div className="flex gap-2">
           {(["proposed", "unmatched", "ambiguous", "matched", "excluded", "all"] as const).map((s) => (
@@ -281,21 +289,21 @@ function ReviewQueue({ workspaceId, runId, onBack }: { workspaceId: string; runI
       </div>
 
       {query.isLoading ? (
-        <LoadingState label="Loading items" />
+        <LoadingState label={t("reconcile.loadingItems")} />
       ) : query.error ? (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       ) : items.length === 0 ? (
-        <EmptyState title="Nothing here" description="No items match this filter." />
+        <EmptyState title={t("reconcile.nothingHereTitle")} description={t("reconcile.nothingHereDescription")} />
       ) : (
         <div className="panel overflow-x-auto p-4">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>State</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Evidence</TableHead>
-                <TableHead>A</TableHead>
-                <TableHead>B</TableHead>
+                <TableHead>{t("reconcile.colState")}</TableHead>
+                <TableHead>{t("reconcile.colScore")}</TableHead>
+                <TableHead>{t("reconcile.colEvidence")}</TableHead>
+                <TableHead>{t("reconcile.colA")}</TableHead>
+                <TableHead>{t("reconcile.colB")}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -329,13 +337,13 @@ function ReviewQueue({ workspaceId, runId, onBack }: { workspaceId: string; runI
                       {item.state === "proposed" || item.state === "ambiguous" ? (
                         <div className="flex gap-1">
                           <Button size="sm" onClick={() => decide(item, "matched", null, false)}>
-                            Approve
+                            {t("reconcile.approve")}
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => decide(item, "excluded", null, false)}>
-                            Reject
+                            {t("reconcile.reject")}
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setOverriding(item)}>
-                            Override
+                            {t("reconcile.override")}
                           </Button>
                         </div>
                       ) : (
@@ -370,19 +378,26 @@ function OverrideDialog({
   onCancel: () => void;
   onConfirm: (decision: "matched" | "excluded", note: string) => void;
 }) {
+  const { t } = useLang();
   const [note, setNote] = useState("");
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
       <div className="panel w-full max-w-sm space-y-4 bg-card p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Override decision</h2>
-        <Input placeholder="Note (recommended)" value={note} onChange={(e) => setNote(e.target.value)} />
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("reconcile.overrideDialogTitle")}
+        </h2>
+        <Input
+          placeholder={t("reconcile.overrideNotePlaceholder")}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
         <div className="flex gap-2">
-          <Button onClick={() => onConfirm("matched", note)}>Force match</Button>
+          <Button onClick={() => onConfirm("matched", note)}>{t("reconcile.forceMatch")}</Button>
           <Button variant="outline" onClick={() => onConfirm("excluded", note)}>
-            Force exclude
+            {t("reconcile.forceExclude")}
           </Button>
           <Button variant="outline" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </div>

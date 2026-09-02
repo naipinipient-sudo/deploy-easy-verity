@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, EmptyState, ErrorState } from "@/components/verity/states";
 import { workspacesQueryOptions, useActiveWorkspace } from "@/hooks/useActiveWorkspace";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/workspaces/")({
   component: WorkspacesPage,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/_authenticated/workspaces/")({
 
 function WorkspacesPage() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const query = useQuery(workspacesQueryOptions());
   const { selectWorkspace } = useActiveWorkspace();
 
@@ -23,19 +25,19 @@ function WorkspacesPage() {
 
   return (
     <AppShell
-      title="Workspaces"
-      description="Each workspace isolates its own datasets, rules, and members."
+      title={t("workspaces.title")}
+      description={t("workspaces.description")}
       actions={
         <Button asChild size="sm">
           <Link to="/workspaces/new">
             <Plus className="mr-2 h-4 w-4" aria-hidden />
-            New workspace
+            {t("workspaces.newWorkspace")}
           </Link>
         </Button>
       }
     >
       {query.isLoading ? (
-        <LoadingState label="Loading workspaces" />
+        <LoadingState label={t("workspaces.loading")} />
       ) : query.error ? (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       ) : query.data && query.data.length > 0 ? (
@@ -59,11 +61,11 @@ function WorkspacesPage() {
       ) : (
         <EmptyState
           icon={<Layers className="h-5 w-5" aria-hidden />}
-          title="No workspaces yet"
-          description="Create a workspace to start uploading and reconciling data."
+          title={t("workspaces.emptyTitle")}
+          description={t("workspaces.emptyDescription")}
           action={
             <Button asChild size="sm">
-              <Link to="/workspaces/new">Create workspace</Link>
+              <Link to="/workspaces/new">{t("workspaces.createWorkspace")}</Link>
             </Button>
           }
         />

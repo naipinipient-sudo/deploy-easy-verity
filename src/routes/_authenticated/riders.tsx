@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Users, AlertTriangle } from "lucide-react";
+import { useLang } from "@/lib/i18n";
 import { AppShell } from "@/components/verity/AppShell";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,34 +26,35 @@ export const Route = createFileRoute("/_authenticated/riders")({
 });
 
 type SortKey = keyof Pick<RiderKpi, "jobs" | "completedRate" | "cancelledRate" | "totalAmount" | "activeDays">;
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "jobs", label: "Jobs" },
-  { value: "completedRate", label: "Completed rate" },
-  { value: "cancelledRate", label: "Cancellation rate" },
-  { value: "totalAmount", label: "Total amount" },
-  { value: "activeDays", label: "Active days" },
+const SORT_OPTIONS: { value: SortKey; labelKey: "sortJobs" | "sortCompletedRate" | "sortCancelledRate" | "sortTotalAmount" | "sortActiveDays" }[] = [
+  { value: "jobs", labelKey: "sortJobs" },
+  { value: "completedRate", labelKey: "sortCompletedRate" },
+  { value: "cancelledRate", labelKey: "sortCancelledRate" },
+  { value: "totalAmount", labelKey: "sortTotalAmount" },
+  { value: "activeDays", labelKey: "sortActiveDays" },
 ];
 
 function RidersPage() {
+  const { t } = useLang();
   const { activeWorkspace, isLoading: workspaceLoading } = useActiveWorkspace();
 
   if (workspaceLoading) {
     return (
-      <AppShell title="Rider performance">
-        <LoadingState label="Loading workspace" />
+      <AppShell title={t("riders.title")}>
+        <LoadingState label={t("common.loadingWorkspace")} />
       </AppShell>
     );
   }
   if (!activeWorkspace) {
     return (
-      <AppShell title="Rider performance">
+      <AppShell title={t("riders.title")}>
         <EmptyState
           icon={<Users className="h-5 w-5" aria-hidden />}
-          title="No workspace selected"
-          description="Create or pick a workspace first."
+          title={t("common.noWorkspaceSelected")}
+          description={t("common.pickWorkspaceFirst")}
           action={
             <Button asChild size="sm">
-              <Link to="/workspaces/new">Create workspace</Link>
+              <Link to="/workspaces/new">{t("workspaces.createWorkspace")}</Link>
             </Button>
           }
         />
@@ -63,6 +65,7 @@ function RidersPage() {
 }
 
 function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
+  const { t } = useLang();
   const [source, setSource] = useState<ExploreSourceOption | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("jobs");
   const [period, setPeriod] = useState<string>("");
@@ -109,13 +112,13 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
 
   return (
     <AppShell
-      title="Rider performance"
-      description="Rider KPIs are informational only — never use them for employment, compensation, disciplinary, or eligibility decisions."
+      title={t("riders.title")}
+      description={t("riders.description")}
     >
       <div className="space-y-6">
         <div className="panel flex flex-wrap items-end gap-4 p-4">
           <div className="min-w-64 space-y-2">
-            <Label>Source</Label>
+            <Label>{t("riders.sourceLabel")}</Label>
             <Select
               value={source ? `${source.type}:${source.id}` : ""}
               onValueChange={(v) => {
@@ -125,12 +128,12 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pick a dataset or master version" />
+                <SelectValue placeholder={t("riders.sourcePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {(sourcesQuery.data ?? []).map((s) => (
                   <SelectItem key={`${s.type}:${s.id}`} value={`${s.type}:${s.id}`}>
-                    {s.label} ({s.rowCount} rows)
+                    {t("riders.sourceOptionRows", { label: s.label, count: s.rowCount })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -138,10 +141,10 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
           </div>
           {hasPeriodField && (
             <div className="min-w-40 space-y-2">
-              <Label>Period contains</Label>
+              <Label>{t("riders.periodLabel")}</Label>
               <input
                 className="flex h-9 w-full border-2 border-input bg-card px-3 py-2 text-sm"
-                placeholder="e.g. 2026-01"
+                placeholder={t("riders.periodPlaceholder")}
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
               />
@@ -149,7 +152,7 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
           )}
           {kpis.length > 0 && (
             <div className="min-w-44 space-y-2">
-              <Label>Rank by</Label>
+              <Label>{t("riders.rankByLabel")}</Label>
               <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -157,7 +160,7 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
                 <SelectContent>
                   {SORT_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
-                      {o.label}
+                      {t(`riders.${o.labelKey}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -167,16 +170,16 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
         </div>
 
         {!source ? (
-          <EmptyState icon={<Users className="h-5 w-5" aria-hidden />} title="Pick a source" description="Choose a dataset or master version above." />
+          <EmptyState icon={<Users className="h-5 w-5" aria-hidden />} title={t("riders.pickSourceTitle")} description={t("riders.pickSourceDescription")} />
         ) : dataQuery.isLoading ? (
-          <LoadingState label="Loading rows" />
+          <LoadingState label={t("riders.loadingRows")} />
         ) : dataQuery.isError ? (
-          <ErrorState message={describeError(dataQuery.error, "Could not load rows")} />
+          <ErrorState message={describeError(dataQuery.error, t("riders.loadRowsError"))} />
         ) : !hasRiderField ? (
           <EmptyState
             icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
-            title="No rider field mapped"
-            description={`"${source.label}" has no column mapped to Rider ID. Map one in the dataset's mapping editor to see rider performance.`}
+            title={t("riders.noRiderFieldTitle")}
+            description={t("riders.noRiderFieldDescription", { source: source.label })}
           />
         ) : (
           <>
@@ -184,12 +187,12 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Rider</TableHead>
-                    <TableHead className="text-right">Jobs</TableHead>
-                    <TableHead className="text-right">Completed rate</TableHead>
-                    <TableHead className="text-right">Cancellation rate</TableHead>
-                    <TableHead className="text-right">Total amount</TableHead>
-                    <TableHead className="text-right">Active days</TableHead>
+                    <TableHead>{t("riders.colRider")}</TableHead>
+                    <TableHead className="text-right">{t("riders.colJobs")}</TableHead>
+                    <TableHead className="text-right">{t("riders.colCompletedRate")}</TableHead>
+                    <TableHead className="text-right">{t("riders.colCancellationRate")}</TableHead>
+                    <TableHead className="text-right">{t("riders.colTotalAmount")}</TableHead>
+                    <TableHead className="text-right">{t("riders.colActiveDays")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -211,15 +214,15 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
                   ))}
                 </TableBody>
               </Table>
-              {kpis.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">No rows match this period.</p>}
+              {kpis.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{t("riders.noRowsForPeriod")}</p>}
             </div>
 
             {selectedRider && (
               <div className="panel space-y-3 p-4">
                 <div className="flex items-center justify-between">
-                  <Label>Source rows for {kpis.find((k) => k.riderId === selectedRider)?.riderName ?? selectedRider}</Label>
+                  <Label>{t("riders.sourceRowsFor", { rider: kpis.find((k) => k.riderId === selectedRider)?.riderName ?? selectedRider })}</Label>
                   <Button size="sm" variant="ghost" onClick={() => setSelectedRider(null)}>
-                    Close
+                    {t("riders.close")}
                   </Button>
                 </div>
                 <div className="max-h-96 overflow-auto border-2 border-border">
@@ -245,7 +248,7 @@ function RidersForWorkspace({ workspaceId }: { workspaceId: string }) {
                   </Table>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {drilldownRows.length} underlying rows — evidence for the KPIs above.
+                  {t("riders.underlyingRows", { count: drilldownRows.length })}
                 </p>
               </div>
             )}

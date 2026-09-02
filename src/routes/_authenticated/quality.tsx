@@ -16,6 +16,7 @@ import {
   reopenFinding,
   type QualityFindingWithContext,
 } from "@/lib/verity/quality";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/quality")({
   component: QualityPage,
@@ -28,26 +29,27 @@ const SEVERITY_VARIANT = {
 } as const;
 
 function QualityPage() {
+  const { t } = useLang();
   const { activeWorkspace, isLoading: workspaceLoading } = useActiveWorkspace();
 
   if (workspaceLoading) {
     return (
-      <AppShell title="Quality">
-        <LoadingState label="Loading workspace" />
+      <AppShell title={t("quality.title")}>
+        <LoadingState label={t("common.loadingWorkspace")} />
       </AppShell>
     );
   }
 
   if (!activeWorkspace) {
     return (
-      <AppShell title="Quality">
+      <AppShell title={t("quality.title")}>
         <EmptyState
           icon={<ShieldAlert className="h-5 w-5" aria-hidden />}
-          title="No workspace selected"
-          description="Create or pick a workspace first."
+          title={t("common.noWorkspaceSelected")}
+          description={t("common.pickWorkspaceFirst")}
           action={
             <Button asChild size="sm">
-              <Link to="/workspaces/new">Create workspace</Link>
+              <Link to="/workspaces/new">{t("workspaces.createWorkspace")}</Link>
             </Button>
           }
         />
@@ -59,6 +61,7 @@ function QualityPage() {
 }
 
 function QualityForWorkspace({ workspaceId }: { workspaceId: string }) {
+  const { t } = useLang();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<"open" | "resolved" | "all">("open");
   const [resolving, setResolving] = useState<QualityFindingWithContext | null>(null);
@@ -75,11 +78,17 @@ function QualityForWorkspace({ workspaceId }: { workspaceId: string }) {
   );
   const openCount = (query.data ?? []).filter((f) => f.status === "open").length;
 
+  const FILTER_LABELS = {
+    open: t("quality.filterOpen"),
+    resolved: t("quality.filterResolved"),
+    all: t("quality.filterAll"),
+  } as const;
+
   return (
     <AppShell
-      title="Quality"
-      description="Findings derived from each import's schema profile — informational, no data is changed automatically."
-      actions={<Badge className="bg-primary text-primary-foreground">{openCount} open</Badge>}
+      title={t("quality.title")}
+      description={t("quality.description")}
+      actions={<Badge className="bg-primary text-primary-foreground">{t("quality.openBadge", { count: openCount })}</Badge>}
     >
       <div className="mb-4 flex gap-2">
         {(["open", "resolved", "all"] as const).map((s) => (
@@ -89,32 +98,32 @@ function QualityForWorkspace({ workspaceId }: { workspaceId: string }) {
             variant={statusFilter === s ? "default" : "outline"}
             onClick={() => setStatusFilter(s)}
           >
-            {s}
+            {FILTER_LABELS[s]}
           </Button>
         ))}
       </div>
 
       {query.isLoading ? (
-        <LoadingState label="Loading findings" />
+        <LoadingState label={t("quality.loadingFindings")} />
       ) : query.error ? (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       ) : findings.length === 0 ? (
         <EmptyState
           icon={<CheckCircle2 className="h-5 w-5" aria-hidden />}
-          title={statusFilter === "open" ? "No open findings" : "Nothing here"}
-          description="Findings show up automatically after each dataset import."
+          title={statusFilter === "open" ? t("quality.emptyOpenTitle") : t("quality.emptyAllTitle")}
+          description={t("quality.emptyDescription")}
         />
       ) : (
         <div className="panel overflow-x-auto p-4">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Severity</TableHead>
-                <TableHead>Dataset</TableHead>
-                <TableHead>Field</TableHead>
-                <TableHead>Finding</TableHead>
-                <TableHead>Rows</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t("quality.colSeverity")}</TableHead>
+                <TableHead>{t("quality.colDataset")}</TableHead>
+                <TableHead>{t("quality.colField")}</TableHead>
+                <TableHead>{t("quality.colFinding")}</TableHead>
+                <TableHead>{t("quality.colRows")}</TableHead>
+                <TableHead>{t("quality.colStatus")}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -138,7 +147,7 @@ function QualityForWorkspace({ workspaceId }: { workspaceId: string }) {
                   <TableCell>
                     {f.status === "open" ? (
                       <Button size="sm" variant="outline" onClick={() => setResolving(f)}>
-                        Resolve
+                        {t("quality.resolve")}
                       </Button>
                     ) : (
                       <Button
@@ -149,11 +158,11 @@ function QualityForWorkspace({ workspaceId }: { workspaceId: string }) {
                             await reopenFinding(f.id);
                             invalidate();
                           } catch (error) {
-                            toast.error(error instanceof Error ? error.message : "Could not reopen");
+                            toast.error(error instanceof Error ? error.message : t("quality.reopenFailed"));
                           }
                         }}
                       >
-                        Reopen
+                        {t("quality.reopen")}
                       </Button>
                     )}
                   </TableCell>
@@ -187,6 +196,7 @@ function ResolveDialog({
   onCancel: () => void;
   onDone: () => void;
 }) {
+  const { t } = useLang();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -194,10 +204,10 @@ function ResolveDialog({
     setBusy(true);
     try {
       await resolveFinding(finding.id, note);
-      toast.success("Finding resolved.");
+      toast.success(t("quality.resolvedToast"));
       onDone();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not resolve");
+      toast.error(error instanceof Error ? error.message : t("quality.resolveFailed"));
     } finally {
       setBusy(false);
     }
@@ -208,21 +218,21 @@ function ResolveDialog({
       <div className="panel w-full max-w-sm space-y-4 bg-card p-6">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Resolve finding
+            {t("quality.resolveDialogTitle")}
           </h2>
           <p className="mt-2 text-sm">{finding.message}</p>
         </div>
         <Input
-          placeholder="Resolution note (optional)"
+          placeholder={t("quality.notePlaceholder")}
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
         <div className="flex gap-2">
           <Button onClick={submit} disabled={busy}>
-            {busy ? "Saving…" : "Mark resolved"}
+            {busy ? t("quality.saving") : t("quality.markResolved")}
           </Button>
           <Button variant="outline" onClick={onCancel} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </div>

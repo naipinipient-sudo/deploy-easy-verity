@@ -30,31 +30,33 @@ import {
   listMasterRows,
   type MasterDataset,
 } from "@/lib/verity/master";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/master")({
   component: MasterPage,
 });
 
 function MasterPage() {
+  const { t } = useLang();
   const { activeWorkspace, isLoading: workspaceLoading } = useActiveWorkspace();
 
   if (workspaceLoading) {
     return (
-      <AppShell title="Master">
-        <LoadingState label="Loading workspace" />
+      <AppShell title={t("master.title")}>
+        <LoadingState label={t("common.loadingWorkspace")} />
       </AppShell>
     );
   }
   if (!activeWorkspace) {
     return (
-      <AppShell title="Master">
+      <AppShell title={t("master.title")}>
         <EmptyState
           icon={<Layers3 className="h-5 w-5" aria-hidden />}
-          title="No workspace selected"
-          description="Create or pick a workspace first."
+          title={t("common.noWorkspaceSelected")}
+          description={t("common.pickWorkspaceFirst")}
           action={
             <Button asChild size="sm">
-              <Link to="/workspaces/new">Create workspace</Link>
+              <Link to="/workspaces/new">{t("workspaces.createWorkspace")}</Link>
             </Button>
           }
         />
@@ -65,6 +67,7 @@ function MasterPage() {
 }
 
 function MasterForWorkspace({ workspaceId }: { workspaceId: string }) {
+  const { t } = useLang();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<MasterDataset | null>(null);
   const [newName, setNewName] = useState("");
@@ -84,7 +87,7 @@ function MasterForWorkspace({ workspaceId }: { workspaceId: string }) {
       setNewName("");
       queryClient.invalidateQueries({ queryKey: ["master-datasets", workspaceId] });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create master dataset");
+      toast.error(error instanceof Error ? error.message : t("master.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -95,26 +98,26 @@ function MasterForWorkspace({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <AppShell title="Master" description="Versioned, published outputs merged from selected dataset versions.">
+    <AppShell title={t("master.title")} description={t("master.pageDescription")}>
       <div className="panel mb-6 flex flex-wrap items-end gap-3 p-6">
         <div className="flex-1">
-          <Label>New master dataset name</Label>
+          <Label>{t("master.newNameLabel")}</Label>
           <Input className="mt-2" value={newName} onChange={(e) => setNewName(e.target.value)} />
         </div>
         <Button onClick={create} disabled={creating || !newName.trim()}>
-          Create
+          {t("master.create")}
         </Button>
       </div>
 
       {query.isLoading ? (
-        <LoadingState label="Loading master datasets" />
+        <LoadingState label={t("master.loadingMasterDatasets")} />
       ) : query.error ? (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       ) : (query.data ?? []).length === 0 ? (
         <EmptyState
           icon={<Layers3 className="h-5 w-5" aria-hidden />}
-          title="No master datasets yet"
-          description="Create one above, then build a version from your imported datasets."
+          title={t("master.emptyTitle")}
+          description={t("master.emptyDescription")}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -126,7 +129,7 @@ function MasterForWorkspace({ workspaceId }: { workspaceId: string }) {
             >
               <p className="font-medium">{m.name}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Created {new Date(m.created_at).toLocaleDateString()}
+                {t("master.createdOn", { date: new Date(m.created_at).toLocaleDateString() })}
               </p>
             </button>
           ))}
@@ -145,6 +148,7 @@ function MasterDetail({
   master: MasterDataset;
   onBack: () => void;
 }) {
+  const { t } = useLang();
   const queryClient = useQueryClient();
   const versionsQuery = useQuery({
     queryKey: ["master-versions", master.id],
@@ -178,11 +182,11 @@ function MasterDetail({
         keyField: keyField as never,
         userId: userData.user.id,
       });
-      toast.success(`Built version with ${outcome.rowCount} rows.`);
+      toast.success(t("master.buildSuccess", { count: outcome.rowCount }));
       setInputIds([]);
       invalidateVersions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Build failed");
+      toast.error(error instanceof Error ? error.message : t("master.buildFailed"));
     } finally {
       setBuilding(false);
     }
@@ -193,31 +197,33 @@ function MasterDetail({
     if (!userData.user) return;
     try {
       await publishMasterVersion(workspaceId, versionId, userData.user.id);
-      toast.success("Published.");
+      toast.success(t("master.publishSuccess"));
       invalidateVersions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not publish");
+      toast.error(error instanceof Error ? error.message : t("master.publishFailed"));
     }
   };
 
   return (
     <AppShell
       title={master.name}
-      description="Build a new version from selected dataset versions, then publish."
+      description={t("master.detailDescription")}
       actions={
         <Button variant="outline" size="sm" onClick={onBack}>
-          ← All master datasets
+          {t("master.backToAll")}
         </Button>
       }
     >
       <div className="panel mb-6 space-y-4 p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Build new version</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("master.buildNewVersion")}
+        </h2>
         {inputOptionsQuery.isLoading ? (
-          <LoadingState label="Loading datasets" rows={2} />
+          <LoadingState label={t("master.loadingDatasets")} rows={2} />
         ) : (
           <>
             <div>
-              <Label>Input versions (order = merge precedence, last wins on conflicts)</Label>
+              <Label>{t("master.inputVersionsLabel")}</Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(inputOptionsQuery.data ?? []).map((v) => (
                   <button
@@ -236,7 +242,7 @@ function MasterDetail({
               </div>
             </div>
             <div className="max-w-xs">
-              <Label>Dedup key field</Label>
+              <Label>{t("master.dedupKeyLabel")}</Label>
               <Select value={keyField} onValueChange={setKeyField}>
                 <SelectTrigger className="mt-2">
                   <SelectValue />
@@ -244,34 +250,34 @@ function MasterDetail({
                 <SelectContent>
                   {CANONICAL_FIELDS.map((f) => (
                     <SelectItem key={f.key} value={f.key}>
-                      {f.label}
+                      {t(`canonical.${f.key}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <Button onClick={build} disabled={building || inputIds.length === 0}>
-              {building ? "Building…" : `Build from ${inputIds.length} version(s)`}
+              {building ? t("master.building") : t("master.buildFrom", { count: inputIds.length })}
             </Button>
           </>
         )}
       </div>
 
       {versionsQuery.isLoading ? (
-        <LoadingState label="Loading versions" />
+        <LoadingState label={t("master.loadingVersions")} />
       ) : versionsQuery.error ? (
         <ErrorState message={versionsQuery.error.message} onRetry={() => versionsQuery.refetch()} />
       ) : (versionsQuery.data ?? []).length === 0 ? (
-        <EmptyState title="No versions yet" description="Build one above." />
+        <EmptyState title={t("master.noVersionsTitle")} description={t("master.noVersionsDescription")} />
       ) : (
         <div className="panel overflow-x-auto p-4">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Version</TableHead>
-                <TableHead>Rows</TableHead>
-                <TableHead>Inputs</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t("master.colVersion")}</TableHead>
+                <TableHead>{t("master.colRows")}</TableHead>
+                <TableHead>{t("master.colInputs")}</TableHead>
+                <TableHead>{t("master.colStatus")}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -285,19 +291,19 @@ function MasterDetail({
                     {v.published ? (
                       <Badge className="bg-success text-success-foreground">
                         <CheckCircle2 className="mr-1 h-3 w-3" aria-hidden />
-                        Published
+                        {t("master.published")}
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Draft</Badge>
+                      <Badge variant="outline">{t("master.draft")}</Badge>
                     )}
                   </TableCell>
                   <TableCell className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => setPreviewVersionId(v.id)}>
-                      Preview
+                      {t("master.preview")}
                     </Button>
                     {!v.published && (
                       <Button size="sm" onClick={() => publish(v.id)}>
-                        Publish
+                        {t("master.publish")}
                       </Button>
                     )}
                   </TableCell>
@@ -316,6 +322,7 @@ function MasterDetail({
 }
 
 function MasterRowsPreview({ versionId, onClose }: { versionId: string; onClose: () => void }) {
+  const { t } = useLang();
   const query = useQuery({
     queryKey: ["master-rows", versionId],
     queryFn: () => listMasterRows(versionId, 50),
@@ -329,14 +336,14 @@ function MasterRowsPreview({ versionId, onClose }: { versionId: string; onClose:
       <div className="panel max-h-[80vh] w-full max-w-4xl space-y-4 overflow-y-auto bg-card p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Preview (first {rows.length} rows)
+            {t("master.previewHeading", { count: rows.length })}
           </h2>
           <Button size="sm" variant="outline" onClick={onClose}>
-            Close
+            {t("master.close")}
           </Button>
         </div>
         {query.isLoading ? (
-          <LoadingState label="Loading rows" />
+          <LoadingState label={t("master.loadingRows")} />
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -345,7 +352,7 @@ function MasterRowsPreview({ versionId, onClose }: { versionId: string; onClose:
                   {fields.map((f) => (
                     <TableHead key={f}>{f}</TableHead>
                   ))}
-                  <TableHead>Sources</TableHead>
+                  <TableHead>{t("master.colSources")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -359,7 +366,9 @@ function MasterRowsPreview({ versionId, onClose }: { versionId: string; onClose:
                           {data[f] || "—"}
                         </TableCell>
                       ))}
-                      <TableCell className="text-xs text-muted-foreground">{lineage.length} record(s)</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {t("master.recordsCount", { count: lineage.length })}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
