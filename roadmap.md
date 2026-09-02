@@ -12,3 +12,4 @@
 - [x] Rider performance: KPIs, ranking, period filter, drilldown to evidence
 - [ ] AI analyst (PRD 8.11) — needs a Gemini API key; proxy via a Supabase Edge Function, never call from the client
 - [x] Publish app (Netlify)
+- [x] English/Indonesian language setting (EN/ID toggle in the header, persisted per browser)
