@@ -18,7 +18,6 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@
 import { LoadingState, EmptyState, ErrorState } from "@/components/verity/states";
 import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
 import { supabase } from "@/integrations/supabase/client";
-import { CANONICAL_FIELDS } from "@/lib/verity/canonical";
 import {
   commonMappedFields,
   listVersionOptions,
@@ -26,32 +25,34 @@ import {
   type CompareSummary,
   type CompareResults,
 } from "@/lib/verity/compare";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/compare")({
   component: ComparePage,
 });
 
 function ComparePage() {
+  const { t } = useLang();
   const { activeWorkspace, isLoading: workspaceLoading } = useActiveWorkspace();
 
   if (workspaceLoading) {
     return (
-      <AppShell title="Compare">
-        <LoadingState label="Loading workspace" />
+      <AppShell title={t("compare.title")}>
+        <LoadingState label={t("common.loadingWorkspace")} />
       </AppShell>
     );
   }
 
   if (!activeWorkspace) {
     return (
-      <AppShell title="Compare">
+      <AppShell title={t("compare.title")}>
         <EmptyState
           icon={<GitCompare className="h-5 w-5" aria-hidden />}
-          title="No workspace selected"
-          description="Create or pick a workspace first."
+          title={t("common.noWorkspaceSelected")}
+          description={t("common.pickWorkspaceFirst")}
           action={
             <Button asChild size="sm">
-              <Link to="/workspaces/new">Create workspace</Link>
+              <Link to="/workspaces/new">{t("workspaces.createWorkspace")}</Link>
             </Button>
           }
         />
@@ -63,6 +64,7 @@ function ComparePage() {
 }
 
 function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
+  const { t } = useLang();
   const queryClient = useQueryClient();
   const versionsQuery = useQuery({
     queryKey: ["dataset-versions-options", workspaceId],
@@ -107,7 +109,7 @@ function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
       setResults((data?.results ?? null) as CompareResults | null);
       queryClient.invalidateQueries({ queryKey: ["audit-events", workspaceId] });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Compare failed");
+      toast.error(error instanceof Error ? error.message : t("compare.compareFailed"));
     } finally {
       setBusy(false);
     }
@@ -115,14 +117,14 @@ function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
 
   if (versionsQuery.isLoading) {
     return (
-      <AppShell title="Compare">
-        <LoadingState label="Loading datasets" />
+      <AppShell title={t("compare.title")}>
+        <LoadingState label={t("compare.loadingDatasets")} />
       </AppShell>
     );
   }
   if (versionsQuery.error) {
     return (
-      <AppShell title="Compare">
+      <AppShell title={t("compare.title")}>
         <ErrorState message={versionsQuery.error.message} onRetry={() => versionsQuery.refetch()} />
       </AppShell>
     );
@@ -131,14 +133,14 @@ function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
   const versions = versionsQuery.data ?? [];
   if (versions.length < 2) {
     return (
-      <AppShell title="Compare" description="Compare two dataset versions by a shared key field.">
+      <AppShell title={t("compare.title")} description={t("compare.description")}>
         <EmptyState
           icon={<GitCompare className="h-5 w-5" aria-hidden />}
-          title="Need at least two dataset versions"
-          description="Import at least two versions (or two datasets) before comparing."
+          title={t("compare.needTwoVersionsTitle")}
+          description={t("compare.needTwoVersionsDescription")}
           action={
             <Button asChild size="sm">
-              <Link to="/datasets">Go to Datasets</Link>
+              <Link to="/datasets">{t("compare.goToDatasets")}</Link>
             </Button>
           }
         />
@@ -146,17 +148,17 @@ function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
     );
   }
 
-  const fieldLabel = (key: string) => CANONICAL_FIELDS.find((f) => f.key === key)?.label ?? key;
+  const fieldLabel = (key: string) => t(`canonical.${key}`);
 
   return (
-    <AppShell title="Compare" description="Compare two dataset versions by a shared key field.">
+    <AppShell title={t("compare.title")} description={t("compare.description")}>
       <div className="panel space-y-4 p-6">
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <Label>Version A</Label>
+            <Label>{t("compare.versionALabel")}</Label>
             <Select value={leftId} onValueChange={setLeftId}>
               <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Pick a version" />
+                <SelectValue placeholder={t("compare.pickVersionPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {versions.map((v) => (
@@ -168,10 +170,10 @@ function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
             </Select>
           </div>
           <div>
-            <Label>Version B</Label>
+            <Label>{t("compare.versionBLabel")}</Label>
             <Select value={rightId} onValueChange={setRightId}>
               <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Pick a version" />
+                <SelectValue placeholder={t("compare.pickVersionPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {versions.map((v) => (
@@ -183,10 +185,12 @@ function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
             </Select>
           </div>
           <div>
-            <Label>Key field</Label>
+            <Label>{t("compare.keyFieldLabel")}</Label>
             <Select value={keyField} onValueChange={setKeyField} disabled={availableKeys.length === 0}>
               <SelectTrigger className="mt-2">
-                <SelectValue placeholder={availableKeys.length === 0 ? "Pick both versions first" : "Pick a key"} />
+                <SelectValue
+                  placeholder={availableKeys.length === 0 ? t("compare.pickBothVersionsFirst") : t("compare.pickKeyPlaceholder")}
+                />
               </SelectTrigger>
               <SelectContent>
                 {availableKeys.map((k) => (
@@ -199,25 +203,25 @@ function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
           </div>
         </div>
         <Button onClick={run} disabled={busy || !leftId || !rightId || !keyField}>
-          {busy ? "Comparing…" : "Run compare"}
+          {busy ? t("compare.comparing") : t("compare.runCompare")}
         </Button>
       </div>
 
       {outcome && results && (
         <div className="mt-6 space-y-6">
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Matched" value={outcome.summary.matched} />
-            <StatCard label="Changed" value={outcome.summary.changedField} />
-            <StatCard label="Only A" value={outcome.summary.onlyLeft} />
-            <StatCard label="Only B" value={outcome.summary.onlyRight} />
-            <StatCard label="Dup keys (A/B)" value={`${outcome.summary.duplicateKeyLeft}/${outcome.summary.duplicateKeyRight}`} />
-            <StatCard label="Ambiguous" value={outcome.summary.ambiguous} />
+            <StatCard label={t("compare.statMatched")} value={outcome.summary.matched} />
+            <StatCard label={t("compare.statChanged")} value={outcome.summary.changedField} />
+            <StatCard label={t("compare.statOnlyA")} value={outcome.summary.onlyLeft} />
+            <StatCard label={t("compare.statOnlyB")} value={outcome.summary.onlyRight} />
+            <StatCard label={t("compare.statDupKeys")} value={`${outcome.summary.duplicateKeyLeft}/${outcome.summary.duplicateKeyRight}`} />
+            <StatCard label={t("compare.statAmbiguous")} value={outcome.summary.ambiguous} />
           </div>
 
           <ResultTable
-            title="Changed field"
+            title={t("compare.changedFieldTitle")}
             rows={results.changed}
-            headers={["Key", "Fields", "A value", "B value"]}
+            headers={[t("compare.colKey"), t("compare.colFields"), t("compare.colAValue"), t("compare.colBValue")]}
             renderRow={(row) => (
               <>
                 <TableCell className="font-mono text-xs">{row.key}</TableCell>
@@ -233,27 +237,29 @@ function CompareForWorkspace({ workspaceId }: { workspaceId: string }) {
           />
 
           <ResultTable
-            title="Only in A"
+            title={t("compare.onlyInATitle")}
             rows={results.onlyLeft}
-            headers={["Key"]}
+            headers={[t("compare.colKey")]}
             renderRow={(row) => <TableCell className="font-mono text-xs">{row.key}</TableCell>}
           />
 
           <ResultTable
-            title="Only in B"
+            title={t("compare.onlyInBTitle")}
             rows={results.onlyRight}
-            headers={["Key"]}
+            headers={[t("compare.colKey")]}
             renderRow={(row) => <TableCell className="font-mono text-xs">{row.key}</TableCell>}
           />
 
           <ResultTable
-            title="Ambiguous keys"
+            title={t("compare.ambiguousKeysTitle")}
             rows={results.ambiguous}
-            headers={["Key", "Occurrences"]}
+            headers={[t("compare.colKey"), t("compare.colOccurrences")]}
             renderRow={(row) => (
               <>
                 <TableCell className="font-mono text-xs">{row.key}</TableCell>
-                <TableCell className="text-xs">{row.leftCount} in A, {row.rightCount} in B</TableCell>
+                <TableCell className="text-xs">
+                  {t("compare.occurrencesValue", { leftCount: row.leftCount, rightCount: row.rightCount })}
+                </TableCell>
               </>
             )}
           />
@@ -283,12 +289,13 @@ function ResultTable<T>({
   headers: string[];
   renderRow: (row: T) => React.ReactNode;
 }) {
+  const { t } = useLang();
   if (rows.length === 0) return null;
   return (
     <div className="panel p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
-        <Badge variant="secondary">{rows.length} shown</Badge>
+        <Badge variant="secondary">{t("compare.rowsShown", { count: rows.length })}</Badge>
       </div>
       <div className="overflow-x-auto">
         <Table>

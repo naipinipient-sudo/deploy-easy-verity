@@ -16,10 +16,12 @@ import { Route as MfaChallengeRouteImport } from './routes/mfa-challenge'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedCompareRouteImport } from './routes/_authenticated/compare'
 import { Route as AuthenticatedDatasetsRouteImport } from './routes/_authenticated/datasets'
+import { Route as AuthenticatedExploreRouteImport } from './routes/_authenticated/explore'
 import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated/master'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedQualityRouteImport } from './routes/_authenticated/quality'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
+import { Route as AuthenticatedRidersRouteImport } from './routes/_authenticated/riders'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedWorkspacesIndexRouteImport } from './routes/_authenticated/workspaces/index'
 import { Route as AuthenticatedWorkspacesNewRouteImport } from './routes/_authenticated/workspaces/new'
@@ -58,6 +60,11 @@ const AuthenticatedDatasetsRoute = AuthenticatedDatasetsRouteImport.update({
   path: '/datasets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedExploreRoute = AuthenticatedExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMasterRoute = AuthenticatedMasterRouteImport.update({
   id: '/master',
   path: '/master',
@@ -76,6 +83,11 @@ const AuthenticatedQualityRoute = AuthenticatedQualityRouteImport.update({
 const AuthenticatedReconcileRoute = AuthenticatedReconcileRouteImport.update({
   id: '/reconcile',
   path: '/reconcile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRidersRoute = AuthenticatedRidersRouteImport.update({
+  id: '/riders',
+  path: '/riders',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -103,10 +115,12 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/compare': typeof AuthenticatedCompareRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
+  '/explore': typeof AuthenticatedExploreRoute
   '/master': typeof AuthenticatedMasterRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/quality': typeof AuthenticatedQualityRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/riders': typeof AuthenticatedRidersRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
@@ -118,10 +132,12 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/compare': typeof AuthenticatedCompareRoute
   '/datasets': typeof AuthenticatedDatasetsRoute
+  '/explore': typeof AuthenticatedExploreRoute
   '/master': typeof AuthenticatedMasterRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/quality': typeof AuthenticatedQualityRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/riders': typeof AuthenticatedRidersRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces': typeof AuthenticatedWorkspacesIndexRoute
@@ -135,10 +151,12 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/compare': typeof AuthenticatedCompareRoute
   '/_authenticated/datasets': typeof AuthenticatedDatasetsRoute
+  '/_authenticated/explore': typeof AuthenticatedExploreRoute
   '/_authenticated/master': typeof AuthenticatedMasterRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/quality': typeof AuthenticatedQualityRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
+  '/_authenticated/riders': typeof AuthenticatedRidersRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/_authenticated/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
@@ -152,10 +170,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/compare'
     | '/datasets'
+    | '/explore'
     | '/master'
     | '/overview'
     | '/quality'
     | '/reconcile'
+    | '/riders'
     | '/settings'
     | '/workspaces/new'
     | '/workspaces/'
@@ -167,10 +187,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/compare'
     | '/datasets'
+    | '/explore'
     | '/master'
     | '/overview'
     | '/quality'
     | '/reconcile'
+    | '/riders'
     | '/settings'
     | '/workspaces/new'
     | '/workspaces'
@@ -183,10 +205,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/compare'
     | '/_authenticated/datasets'
+    | '/_authenticated/explore'
     | '/_authenticated/master'
     | '/_authenticated/overview'
     | '/_authenticated/quality'
     | '/_authenticated/reconcile'
+    | '/_authenticated/riders'
     | '/_authenticated/settings'
     | '/_authenticated/workspaces/new'
     | '/_authenticated/workspaces/'
@@ -251,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDatasetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/explore': {
+      id: '/_authenticated/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof AuthenticatedExploreRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/master': {
       id: '/_authenticated/master'
       path: '/master'
@@ -277,6 +308,13 @@ declare module '@tanstack/react-router' {
       path: '/reconcile'
       fullPath: '/reconcile'
       preLoaderRoute: typeof AuthenticatedReconcileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/riders': {
+      id: '/_authenticated/riders'
+      path: '/riders'
+      fullPath: '/riders'
+      preLoaderRoute: typeof AuthenticatedRidersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -306,10 +344,12 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCompareRoute: typeof AuthenticatedCompareRoute
   AuthenticatedDatasetsRoute: typeof AuthenticatedDatasetsRoute
+  AuthenticatedExploreRoute: typeof AuthenticatedExploreRoute
   AuthenticatedMasterRoute: typeof AuthenticatedMasterRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedQualityRoute: typeof AuthenticatedQualityRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
+  AuthenticatedRidersRoute: typeof AuthenticatedRidersRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedWorkspacesNewRoute: typeof AuthenticatedWorkspacesNewRoute
   AuthenticatedWorkspacesIndexRoute: typeof AuthenticatedWorkspacesIndexRoute
@@ -318,10 +358,12 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCompareRoute: AuthenticatedCompareRoute,
   AuthenticatedDatasetsRoute: AuthenticatedDatasetsRoute,
+  AuthenticatedExploreRoute: AuthenticatedExploreRoute,
   AuthenticatedMasterRoute: AuthenticatedMasterRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedQualityRoute: AuthenticatedQualityRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
+  AuthenticatedRidersRoute: AuthenticatedRidersRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedWorkspacesNewRoute: AuthenticatedWorkspacesNewRoute,
   AuthenticatedWorkspacesIndexRoute: AuthenticatedWorkspacesIndexRoute,

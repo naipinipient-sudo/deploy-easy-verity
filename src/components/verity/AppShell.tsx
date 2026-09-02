@@ -4,19 +4,21 @@ import { ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
 import { useAuth } from "@/hooks/useAuth";
+import { useLang } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
+import { LangToggle } from "@/components/verity/LangToggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { to: "/datasets", label: "Datasets", soon: false },
-  { to: "/quality", label: "Quality", soon: false },
-  { to: "/compare", label: "Compare", soon: false },
-  { to: "/reconcile", label: "Reconcile", soon: false },
-  { to: "/master", label: "Master", soon: false },
-  { to: "/explore", label: "Explore", soon: true },
-  { to: "/riders", label: "Riders", soon: true },
-  { to: "/ai-analyst", label: "AI analyst", soon: true },
-  { to: "/settings", label: "Settings", soon: false },
+  { to: "/datasets", labelKey: "nav.datasets", soon: false },
+  { to: "/quality", labelKey: "nav.quality", soon: false },
+  { to: "/compare", labelKey: "nav.compare", soon: false },
+  { to: "/reconcile", labelKey: "nav.reconcile", soon: false },
+  { to: "/master", labelKey: "nav.master", soon: false },
+  { to: "/explore", labelKey: "nav.explore", soon: false },
+  { to: "/riders", labelKey: "nav.riders", soon: false },
+  { to: "/ai-analyst", labelKey: "nav.aiAnalyst", soon: true },
+  { to: "/settings", labelKey: "nav.settings", soon: false },
 ] as const;
 
 export function AppShell({
@@ -33,6 +35,7 @@ export function AppShell({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeWorkspace } = useActiveWorkspace();
+  const { t } = useLang();
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -50,16 +53,17 @@ export function AppShell({
             <span className="font-display text-lg font-bold tracking-tight">Verity</span>
           </Link>
           <Badge variant="outline" className="border-primary text-primary">
-            Read-only sources
+            {t("appshell.readOnlyBadge")}
           </Badge>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
+          <LangToggle />
           <Link
             to="/workspaces"
             className="border-2 border-header-foreground/60 px-3 py-1 font-semibold uppercase tracking-wide hover:border-header-foreground"
           >
-            {activeWorkspace?.name ?? "No workspace"}
+            {activeWorkspace?.name ?? t("appshell.noWorkspace")}
           </Link>
           {activeWorkspace && (
             <span className="border-2 border-header-foreground/60 px-3 py-1 font-semibold uppercase tracking-wide">
@@ -69,7 +73,7 @@ export function AppShell({
           {user && (
             <button
               onClick={signOut}
-              title="Sign out"
+              title={t("appshell.signOut")}
               className="rounded-full bg-header-foreground px-3 py-1 font-semibold text-header lowercase"
             >
               {user.email}
@@ -82,7 +86,7 @@ export function AppShell({
         <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-64">
           <nav className="panel flex flex-col gap-2 p-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Workspace
+              {t("nav.groupPipeline")}
             </span>
             {NAV.map((item) =>
               item.soon ? (
@@ -90,9 +94,9 @@ export function AppShell({
                   key={item.to}
                   className="flex items-center justify-between border-2 border-dashed border-border/50 px-3 py-2 text-sm text-muted-foreground"
                 >
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                   <Badge variant="secondary" className="text-[10px]">
-                    Soon
+                    {t("nav.soon")}
                   </Badge>
                 </div>
               ) : (
@@ -102,7 +106,7 @@ export function AppShell({
                   className="border-2 border-border bg-card px-3 py-2 text-sm font-semibold hover:bg-accent"
                   activeProps={{ className: "border-2 border-border bg-primary text-primary-foreground px-3 py-2 text-sm font-semibold" }}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               ),
             )}
@@ -111,11 +115,9 @@ export function AppShell({
           <div className="border-2 border-border bg-secondary p-4">
             <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-              Principle
+              {t("appshell.principleLabel")}
             </span>
-            <p className="mt-2 text-sm font-medium">
-              Verity never writes back to a source system. Uploads are immutable evidence.
-            </p>
+            <p className="mt-2 text-sm font-medium">{t("appshell.principleBody")}</p>
           </div>
         </aside>
 
@@ -123,7 +125,7 @@ export function AppShell({
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Workspace home
+                {t("appshell.workspaceHome")}
               </p>
               <h1 className={cn("truncate text-3xl font-bold")}>{title}</h1>
               {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}

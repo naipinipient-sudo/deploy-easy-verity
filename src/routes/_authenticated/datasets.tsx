@@ -32,6 +32,7 @@ import {
   type ParsedFile,
   type FileProfile,
 } from "@/lib/verity/fileProfile";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/datasets")({
   component: DatasetsPage,
@@ -59,26 +60,27 @@ function datasetsQueryOptions(workspaceId: string) {
 }
 
 function DatasetsPage() {
+  const { t } = useLang();
   const { activeWorkspace, isLoading: workspaceLoading } = useActiveWorkspace();
 
   if (workspaceLoading) {
     return (
-      <AppShell title="Datasets">
-        <LoadingState label="Loading workspace" />
+      <AppShell title={t("datasets.title")}>
+        <LoadingState label={t("common.loadingWorkspace")} />
       </AppShell>
     );
   }
 
   if (!activeWorkspace) {
     return (
-      <AppShell title="Datasets">
+      <AppShell title={t("datasets.title")}>
         <EmptyState
           icon={<Database className="h-5 w-5" aria-hidden />}
-          title="No workspace selected"
-          description="Create or pick a workspace first."
+          title={t("common.noWorkspaceSelected")}
+          description={t("common.pickWorkspaceFirst")}
           action={
             <Button asChild size="sm">
-              <Link to="/workspaces/new">Create workspace</Link>
+              <Link to="/workspaces/new">{t("workspaces.createWorkspace")}</Link>
             </Button>
           }
         />
@@ -90,6 +92,7 @@ function DatasetsPage() {
 }
 
 function DatasetsForWorkspace({ workspaceId }: { workspaceId: string }) {
+  const { t } = useLang();
   const query = useQuery(datasetsQueryOptions(workspaceId));
   const auditQuery = useQuery({
     queryKey: ["audit-events", workspaceId],
@@ -102,13 +105,11 @@ function DatasetsForWorkspace({ workspaceId }: { workspaceId: string }) {
 
   return (
     <AppShell
-      title="Datasets"
-      actions={
-        <Badge className="bg-primary text-primary-foreground">Step 1 → 3 · Ingest, profile, map</Badge>
-      }
+      title={t("datasets.title")}
+      actions={<Badge className="bg-primary text-primary-foreground">{t("datasets.stepBadge")}</Badge>}
     >
       {query.isLoading ? (
-        <LoadingState label="Loading datasets" />
+        <LoadingState label={t("datasets.loadingDatasets")} />
       ) : query.error ? (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       ) : (
@@ -119,10 +120,10 @@ function DatasetsForWorkspace({ workspaceId }: { workspaceId: string }) {
           />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Datasets" value={datasets.length} />
-            <StatCard label="Versions" value={versions.length} />
-            <StatCard label="Latest rows" value={latestRows} />
-            <StatCard label="Mappings certified" value={`${versions.length}/${versions.length}`} />
+            <StatCard label={t("datasets.statDatasets")} value={datasets.length} />
+            <StatCard label={t("datasets.statVersions")} value={versions.length} />
+            <StatCard label={t("datasets.statLatestRows")} value={latestRows} />
+            <StatCard label={t("datasets.statMappingsCertified")} value={`${versions.length}/${versions.length}`} />
           </div>
 
           {datasets.length > 0 ? (
@@ -130,9 +131,9 @@ function DatasetsForWorkspace({ workspaceId }: { workspaceId: string }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Latest rows</TableHead>
-                    <TableHead>Versions</TableHead>
+                    <TableHead>{t("datasets.colName")}</TableHead>
+                    <TableHead>{t("datasets.statLatestRows")}</TableHead>
+                    <TableHead>{t("datasets.statVersions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -148,17 +149,14 @@ function DatasetsForWorkspace({ workspaceId }: { workspaceId: string }) {
             </div>
           ) : (
             <div className="panel bg-secondary/40 p-10 text-center">
-              <p className="text-lg font-bold">No datasets yet</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Drop a CSV or XLSX export above. Verity will profile it in your browser and keep it as
-                immutable evidence — sources are never written back.
-              </p>
+              <p className="text-lg font-bold">{t("datasets.emptyTitle")}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{t("datasets.emptyDescription")}</p>
             </div>
           )}
 
           <div className="panel p-5">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Audit trail
+              {t("datasets.auditTrail")}
             </span>
             {auditQuery.data && auditQuery.data.length > 0 ? (
               <ul className="mt-3 space-y-2 text-sm">
@@ -172,9 +170,7 @@ function DatasetsForWorkspace({ workspaceId }: { workspaceId: string }) {
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-muted-foreground">
-                No events yet. Every upload, mapping edit, and certification is logged here.
-              </p>
+              <p className="mt-3 text-sm text-muted-foreground">{t("datasets.noEvents")}</p>
             )}
           </div>
         </div>
@@ -204,6 +200,7 @@ function UploadPanel({
   workspaceId: string;
   datasets: { id: string; name: string }[];
 }) {
+  const { t } = useLang();
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
@@ -216,12 +213,17 @@ function UploadPanel({
 
   async function handleFile(f: File) {
     if (f.size > MAX_FILE_BYTES) {
-      toast.error(`File is ${(f.size / 1024 / 1024).toFixed(1)}MB — MVP limit is ${MAX_FILE_BYTES / 1024 / 1024}MB.`);
+      toast.error(
+        t("datasets.fileTooLarge", {
+          size: (f.size / 1024 / 1024).toFixed(1),
+          limit: MAX_FILE_BYTES / 1024 / 1024,
+        }),
+      );
       return;
     }
     const p = await parseFile(f);
     if (p.rowCount > MAX_ROWS) {
-      toast.error(`File has ${p.rowCount} rows — MVP limit is ${MAX_ROWS}.`);
+      toast.error(t("datasets.tooManyRows", { rows: p.rowCount, limit: MAX_ROWS }));
       return;
     }
     setFile(f);
@@ -250,7 +252,7 @@ function UploadPanel({
     setBusy(true);
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) throw new Error("You must be signed in.");
+      if (userError || !userData.user) throw new Error(t("datasets.mustBeSignedIn"));
       const userId = userData.user.id;
 
       const checksum = await sha256Hex(file);
@@ -272,7 +274,7 @@ function UploadPanel({
         .eq("dataset_id", datasetId);
       const versionNo = (count ?? 0) + 1;
 
-      setProgress("Uploading raw file…");
+      setProgress(t("datasets.uploadingRaw"));
       const path = `${workspaceId}/${datasetId}/${versionNo}-${file.name}`;
       const { error: uploadError } = await supabase.storage.from("dataset-uploads").upload(path, file);
       if (uploadError) throw uploadError;
@@ -299,7 +301,13 @@ function UploadPanel({
 
       for (let start = 0; start < parsed.rows.length; start += ROW_INSERT_CHUNK) {
         const chunk = parsed.rows.slice(start, start + ROW_INSERT_CHUNK);
-        setProgress(`Saving rows ${start + 1}–${Math.min(start + chunk.length, parsed.rows.length)} of ${parsed.rows.length}…`);
+        setProgress(
+          t("datasets.savingRows", {
+            from: start + 1,
+            to: Math.min(start + chunk.length, parsed.rows.length),
+            total: parsed.rows.length,
+          }),
+        );
         const records = chunk.map((row, i) => ({
           workspace_id: workspaceId,
           version_id: version.id,
@@ -324,13 +332,13 @@ function UploadPanel({
 
       toast.success(
         findings.length > 0
-          ? `Imported ${parsed.rowCount} rows — ${findings.length} quality finding(s) to review.`
-          : `Imported ${parsed.rowCount} rows.`,
+          ? t("datasets.importedWithFindings", { rows: parsed.rowCount, findings: findings.length })
+          : t("datasets.importedNoFindings", { rows: parsed.rowCount }),
       );
       await queryClient.invalidateQueries({ queryKey: ["datasets", workspaceId] });
       reset();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Import failed");
+      toast.error(error instanceof Error ? error.message : t("datasets.importFailed"));
     } finally {
       setBusy(false);
       setProgress(null);
@@ -343,26 +351,22 @@ function UploadPanel({
         <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Step 1 — Ingest
+              {t("datasets.uploadStepLabel")}
             </p>
-            <h2 className="mt-1 text-2xl font-bold">Drop CSV or XLSX exports</h2>
-            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Files are parsed in your browser. Every import becomes an append-only version with a
-              checksum, row count, and detected schema. Re-uploading the same dataset name adds a new
-              version instead of overwriting.
-            </p>
+            <h2 className="mt-1 text-2xl font-bold">{t("datasets.uploadTitle")}</h2>
+            <p className="mt-2 max-w-xl text-sm text-muted-foreground">{t("datasets.uploadDescription")}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Badge variant="secondary">CSV</Badge>
-              <Badge variant="secondary">XLSX — one dataset per sheet</Badge>
+              <Badge variant="secondary">{t("datasets.badgeCsv")}</Badge>
+              <Badge variant="secondary">{t("datasets.badgeXlsx")}</Badge>
               <Badge className="bg-secondary text-secondary-foreground">
-                Browser limit ≈ {MAX_ROWS.toLocaleString()} rows
+                {t("datasets.badgeLimit", { limit: MAX_ROWS.toLocaleString() })}
               </Badge>
             </div>
           </div>
           <div className="flex flex-col items-start gap-2 lg:items-end">
             <Button asChild size="lg">
               <label className="cursor-pointer">
-                Choose files
+                {t("datasets.chooseFiles")}
                 <input
                   type="file"
                   accept=".csv,.xlsx,.xls"
@@ -374,14 +378,14 @@ function UploadPanel({
                 />
               </label>
             </Button>
-            <span className="text-xs text-muted-foreground">or drag &amp; drop</span>
+            <span className="text-xs text-muted-foreground">{t("datasets.orDragDrop")}</span>
           </div>
         </div>
       )}
 
       {parsed && parsed.sheetNames.length > 1 && (
         <div className="mt-4 max-w-xs">
-          <Label>Sheet</Label>
+          <Label>{t("datasets.sheetLabel")}</Label>
           <Select value={parsed.activeSheet} onValueChange={pickSheet}>
             <SelectTrigger className="mt-2">
               <SelectValue />
@@ -400,17 +404,17 @@ function UploadPanel({
       {profile && parsed && (
         <>
           <p className="mt-4 text-sm text-muted-foreground">
-            {parsed.rowCount} rows detected. Map source columns to canonical fields:
+            {t("datasets.rowsDetected", { count: parsed.rowCount })}
           </p>
           <div className="mt-3 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Source column</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Null %</TableHead>
-                  <TableHead>Sample</TableHead>
-                  <TableHead>Maps to</TableHead>
+                  <TableHead>{t("datasets.colSourceColumn")}</TableHead>
+                  <TableHead>{t("datasets.colType")}</TableHead>
+                  <TableHead>{t("datasets.colNullPct")}</TableHead>
+                  <TableHead>{t("datasets.colSample")}</TableHead>
+                  <TableHead>{t("datasets.colMapsTo")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -433,10 +437,10 @@ function UploadPanel({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__ignore__">— ignore —</SelectItem>
+                          <SelectItem value="__ignore__">{t("datasets.ignoreOption")}</SelectItem>
                           {CANONICAL_FIELDS.map((f) => (
                             <SelectItem key={f.key} value={f.key}>
-                              {f.label}
+                              {t(`canonical.${f.key}`)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -450,16 +454,16 @@ function UploadPanel({
 
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <div className="min-w-48">
-              <Label>Dataset</Label>
+              <Label>{t("datasets.datasetLabel")}</Label>
               <Select value={targetDatasetId} onValueChange={setTargetDatasetId}>
                 <SelectTrigger className="mt-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__new__">New dataset</SelectItem>
+                  <SelectItem value="__new__">{t("datasets.newDatasetOption")}</SelectItem>
                   {datasets.map((d) => (
                     <SelectItem key={d.id} value={d.id}>
-                      {d.name} (new version)
+                      {t("datasets.existingDatasetOption", { name: d.name })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -467,15 +471,15 @@ function UploadPanel({
             </div>
             {targetDatasetId === "__new__" && (
               <div className="min-w-48">
-                <Label>Name</Label>
+                <Label>{t("datasets.nameLabel")}</Label>
                 <Input className="mt-2" value={newName} onChange={(e) => setNewName(e.target.value)} />
               </div>
             )}
             <Button onClick={confirmImport} disabled={busy || !newName.trim()}>
-              {busy ? progress ?? "Importing…" : "Confirm mapping & import"}
+              {busy ? progress ?? t("datasets.importing") : t("datasets.confirmImport")}
             </Button>
             <Button variant="outline" onClick={reset} disabled={busy}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </>

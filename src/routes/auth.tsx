@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/verity/PasswordInput";
+import { LangToggle } from "@/components/verity/LangToggle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -43,6 +45,7 @@ async function goPastSignIn(navigate: ReturnType<typeof useNavigate>) {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,7 +73,7 @@ function AuthPage() {
   const signUp = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!email.toLowerCase().endsWith("@dashelectric.co")) {
-      toast.error("Only @dashelectric.co email addresses can sign up.");
+      toast.error(t("auth.domainError"));
       return;
     }
     setBusy(true);
@@ -87,17 +90,20 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    toast.success("Account created. You can sign in now.");
+    toast.success(t("auth.accountCreated"));
     navigate({ to: "/overview" });
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center grid-noise px-4 py-12">
       <div className="w-full max-w-md">
-        <Link to="/" className="mb-6 flex items-center justify-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
-          <span className="font-display text-lg font-semibold">Verity</span>
-        </Link>
+        <div className="mb-6 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
+            <span className="font-display text-lg font-semibold">Verity</span>
+          </Link>
+          <LangToggle />
+        </div>
 
         <div className="panel p-6">
           {mode === "forgot" ? (
@@ -106,14 +112,14 @@ function AuthPage() {
           <>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Create account</TabsTrigger>
+              <TabsTrigger value="signin">{t("auth.signIn")}</TabsTrigger>
+              <TabsTrigger value="signup">{t("auth.createAccount")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="signin">
               <form className="mt-5 space-y-4" onSubmit={signIn}>
                 <div className="space-y-2">
-                  <Label htmlFor="signin-email">Work email</Label>
+                  <Label htmlFor="signin-email">{t("auth.workEmail")}</Label>
                   <Input
                     id="signin-email"
                     type="email"
@@ -125,13 +131,13 @@ function AuthPage() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="signin-password">{t("auth.password")}</Label>
                     <button
                       type="button"
                       onClick={() => setMode("forgot")}
                       className="text-xs font-medium normal-case text-primary hover:underline"
                     >
-                      Forgot password?
+                      {t("auth.forgotPassword")}
                     </button>
                   </div>
                   <PasswordInput
@@ -144,7 +150,7 @@ function AuthPage() {
                 </div>
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Sign in
+                  {t("auth.signIn")}
                 </Button>
               </form>
             </TabsContent>
@@ -152,7 +158,7 @@ function AuthPage() {
             <TabsContent value="signup">
               <form className="mt-5 space-y-4" onSubmit={signUp}>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Name</Label>
+                  <Label htmlFor="signup-name">{t("auth.name")}</Label>
                   <Input
                     id="signup-name"
                     autoComplete="name"
@@ -161,7 +167,7 @@ function AuthPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Work email</Label>
+                  <Label htmlFor="signup-email">{t("auth.workEmail")}</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -171,10 +177,10 @@ function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">Only @dashelectric.co addresses can sign up.</p>
+                  <p className="text-xs text-muted-foreground">{t("auth.domainHint")}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">{t("auth.password")}</Label>
                   <PasswordInput
                     id="signup-password"
                     autoComplete="new-password"
@@ -186,7 +192,7 @@ function AuthPage() {
                 </div>
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Create account
+                  {t("auth.createAccount")}
                 </Button>
               </form>
             </TabsContent>
@@ -195,15 +201,14 @@ function AuthPage() {
           )}
         </div>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Verity never writes back to your source systems.
-        </p>
+        <p className="mt-4 text-center text-xs text-muted-foreground">{t("auth.footerNote")}</p>
       </div>
     </div>
   );
 }
 
 function ForgotPasswordPanel({ onCancel }: { onCancel: () => void }) {
+  const { t } = useLang();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -226,17 +231,15 @@ function ForgotPasswordPanel({ onCancel }: { onCancel: () => void }) {
     return (
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold">Check your email</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            We sent a password reset link to {email}. Open it to set a new password.
-          </p>
+          <h2 className="text-2xl font-bold">{t("auth.checkEmailTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("auth.checkEmailBody", { email })}</p>
         </div>
         <button
           type="button"
           onClick={onCancel}
           className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
         >
-          Back to sign in
+          {t("common.backToSignIn")}
         </button>
       </div>
     );
@@ -245,14 +248,12 @@ function ForgotPasswordPanel({ onCancel }: { onCancel: () => void }) {
   return (
     <form className="space-y-4" onSubmit={sendLink}>
       <div>
-        <h2 className="text-2xl font-bold">Reset password</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Enter your email and we'll send a link to set a new password.
-        </p>
+        <h2 className="text-2xl font-bold">{t("auth.resetTitle")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("auth.resetBody")}</p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="forgot-email">Email</Label>
+        <Label htmlFor="forgot-email">{t("auth.email")}</Label>
         <Input
           id="forgot-email"
           type="email"
@@ -265,14 +266,14 @@ function ForgotPasswordPanel({ onCancel }: { onCancel: () => void }) {
 
       <Button type="submit" className="w-full" disabled={busy}>
         {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-        Send reset link
+        {t("auth.sendResetLink")}
       </Button>
       <button
         type="button"
         onClick={onCancel}
         className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
       >
-        Back to sign in
+        {t("common.backToSignIn")}
       </button>
     </form>
   );

@@ -13,14 +13,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveWorkspace } from "@/hooks/useActiveWorkspace";
 import { adminResetPassword, listWorkspaceMembers, type WorkspaceMemberWithProfile } from "@/lib/verity/workspaces";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 });
 
 function SettingsPage() {
+  const { t } = useLang();
   return (
-    <AppShell title="Settings" description="Manage your account security.">
+    <AppShell title={t("settings.title")} description={t("settings.description")}>
       <div className="max-w-lg space-y-6">
         <ChangePassword />
         <TwoFactor />
@@ -31,6 +33,7 @@ function SettingsPage() {
 }
 
 function ChangePassword() {
+  const { t } = useLang();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,7 +41,7 @@ function ChangePassword() {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (password !== confirm) {
-      toast.error("Passwords don't match.");
+      toast.error(t("resetPassword.mismatch"));
       return;
     }
     setBusy(true);
@@ -48,7 +51,7 @@ function ChangePassword() {
       toast.error(error.message);
       return;
     }
-    toast.success("Password updated.");
+    toast.success(t("resetPassword.updated"));
     setPassword("");
     setConfirm("");
   };
@@ -56,10 +59,10 @@ function ChangePassword() {
   return (
     <form className="panel space-y-4 p-6" onSubmit={submit}>
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Change password
+        {t("settings.changePassword")}
       </h2>
       <div className="space-y-2">
-        <Label htmlFor="cp-new">New password</Label>
+        <Label htmlFor="cp-new">{t("resetPassword.newPassword")}</Label>
         <PasswordInput
           id="cp-new"
           autoComplete="new-password"
@@ -70,7 +73,7 @@ function ChangePassword() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="cp-confirm">Confirm password</Label>
+        <Label htmlFor="cp-confirm">{t("resetPassword.confirmPassword")}</Label>
         <PasswordInput
           id="cp-confirm"
           autoComplete="new-password"
@@ -82,13 +85,14 @@ function ChangePassword() {
       </div>
       <Button type="submit" disabled={busy}>
         {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-        Update password
+        {t("resetPassword.updatePassword")}
       </Button>
     </form>
   );
 }
 
 function TwoFactor() {
+  const { t } = useLang();
   const [factors, setFactors] = useState<Factor[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<{ factorId: string; qrCode: string; secret: string } | null>(null);
@@ -130,7 +134,7 @@ function TwoFactor() {
       toast.error(error.message);
       return;
     }
-    toast.success("Two-factor authentication enabled.");
+    toast.success(t("settings.twoFactorEnabledToast"));
     setEnrolling(null);
     setCode("");
     await load();
@@ -144,7 +148,7 @@ function TwoFactor() {
       toast.error(error.message);
       return;
     }
-    toast.success("Two-factor authentication disabled.");
+    toast.success(t("settings.twoFactorDisabledToast"));
     await load();
   };
 
@@ -161,32 +165,29 @@ function TwoFactor() {
   return (
     <div className="panel space-y-4 p-6">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Two-factor authentication
+        {t("settings.twoFactor")}
       </h2>
 
       {active ? (
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm font-medium text-success">
             <ShieldCheck className="h-4 w-4" aria-hidden />
-            Enabled — {active.friendly_name ?? "Authenticator app"}
+            {t("settings.twoFactorEnabled", { name: active.friendly_name ?? t("settings.twoFactorEnabledDefault") })}
           </div>
           <Button variant="outline" size="sm" onClick={() => disable(active.id)} disabled={busy}>
             <ShieldOff className="mr-2 h-3.5 w-3.5" aria-hidden />
-            Disable
+            {t("settings.twoFactorDisable")}
           </Button>
         </div>
       ) : enrolling ? (
         <form className="space-y-4" onSubmit={confirmEnroll}>
-          <p className="text-sm text-muted-foreground">
-            Scan this QR code with your authenticator app (Google Authenticator, 1Password, Authy…),
-            or enter the secret manually.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("settings.twoFactorScanHint")}</p>
           <img src={enrolling.qrCode} alt="TOTP QR code" className="h-40 w-40 border-2 border-border bg-white" />
           <p className="break-all border-2 border-border bg-muted px-3 py-2 font-mono text-xs">
             {enrolling.secret}
           </p>
           <div className="space-y-2">
-            <Label htmlFor="mfa-enroll-code">6-digit code</Label>
+            <Label htmlFor="mfa-enroll-code">{t("settings.sixDigitCode")}</Label>
             <Input
               id="mfa-enroll-code"
               inputMode="numeric"
@@ -199,20 +200,18 @@ function TwoFactor() {
           </div>
           <div className="flex gap-2">
             <Button type="submit" disabled={busy || code.length !== 6}>
-              Verify &amp; enable
+              {t("settings.verifyEnable")}
             </Button>
             <Button type="button" variant="outline" onClick={() => setEnrolling(null)} disabled={busy}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </form>
       ) : (
         <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            Not enabled. Add an authenticator app for a second sign-in step.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("settings.twoFactorOffHint")}</p>
           <Button size="sm" onClick={startEnroll} disabled={busy}>
-            Enable 2FA
+            {t("settings.enable2fa")}
           </Button>
         </div>
       )}
@@ -221,6 +220,7 @@ function TwoFactor() {
 }
 
 function TeamMembers() {
+  const { t } = useLang();
   const { user } = useAuth();
   const { activeWorkspace } = useActiveWorkspace();
   const [members, setMembers] = useState<WorkspaceMemberWithProfile[]>([]);
@@ -249,7 +249,7 @@ function TeamMembers() {
   return (
     <div className="panel space-y-4 p-6">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Team — {activeWorkspace.name}
+        {t("settings.team", { workspace: activeWorkspace.name })}
       </h2>
 
       {loading ? (
@@ -276,7 +276,7 @@ function TeamMembers() {
                 {m.userId !== user?.id && (
                   <Button variant="outline" size="sm" onClick={() => setResetTarget(m)}>
                     <KeyRound className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                    Reset password
+                    {t("settings.resetPassword")}
                   </Button>
                 )}
               </div>
@@ -297,6 +297,7 @@ function ResetMemberPasswordForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useLang();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -304,13 +305,13 @@ function ResetMemberPasswordForm({
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (password !== confirm) {
-      toast.error("Passwords don't match.");
+      toast.error(t("resetPassword.mismatch"));
       return;
     }
     setBusy(true);
     try {
       await adminResetPassword(member.userId, password);
-      toast.success(`Password updated for ${member.email ?? member.displayName}.`);
+      toast.success(t("settings.passwordUpdatedFor", { person: member.email ?? member.displayName ?? "" }));
       onDone();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not reset password");
@@ -322,10 +323,10 @@ function ResetMemberPasswordForm({
   return (
     <form className="space-y-4" onSubmit={submit}>
       <p className="text-sm">
-        New password for <strong>{member.email ?? member.displayName}</strong>
+        {t("settings.newPasswordForPrefix")} <strong>{member.email ?? member.displayName}</strong>
       </p>
       <div className="space-y-2">
-        <Label htmlFor="member-new-password">New password</Label>
+        <Label htmlFor="member-new-password">{t("resetPassword.newPassword")}</Label>
         <PasswordInput
           id="member-new-password"
           autoComplete="new-password"
@@ -336,7 +337,7 @@ function ResetMemberPasswordForm({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="member-confirm-password">Confirm password</Label>
+        <Label htmlFor="member-confirm-password">{t("resetPassword.confirmPassword")}</Label>
         <PasswordInput
           id="member-confirm-password"
           autoComplete="new-password"
@@ -349,10 +350,10 @@ function ResetMemberPasswordForm({
       <div className="flex gap-2">
         <Button type="submit" disabled={busy}>
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-          Set password
+          {t("settings.setPassword")}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
     </form>
